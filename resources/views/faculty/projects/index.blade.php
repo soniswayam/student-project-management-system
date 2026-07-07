@@ -2,7 +2,7 @@
 @section('title', 'Assigned Projects')
 
 @section('content')
-<h3 class="mb-3">Assigned Projects</h3>
+<h3 class="mb-3"><i class="bi bi-folder-check me-2"></i>Assigned Projects</h3>
 
 <div class="card">
     <div class="table-responsive">
@@ -16,7 +16,7 @@
                     <td>{{ $project->members->count() }}</td>
                     <td>{{ ucfirst($project->project_type) }}</td>
                     <td><span class="badge bg-{{ $project->statusColor() }}">{{ $project->status }}</span></td>
-                    <td class="text-end"><a href="{{ route('faculty.projects.show', $project) }}" class="btn btn-sm btn-outline-primary">Review</a></td>
+                    <td class="text-end"><a href="{{ route('faculty.projects.show', $project) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye me-1"></i>Review</a></td>
                 </tr>
             @empty
                 <tr><td colspan="6" class="text-center text-muted py-4">No projects assigned to you yet.</td></tr>

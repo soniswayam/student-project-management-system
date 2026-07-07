@@ -4,7 +4,7 @@
 @section('content')
 <div class="row justify-content-center">
     <div class="col-lg-8">
-        <h3 class="mb-1">Upload Final Project</h3>
+        <h3 class="mb-1"><i class="bi bi-cloud-arrow-up me-2"></i>Upload Final Project</h3>
         <p class="text-muted">Synopsis approved — upload your deliverables below.</p>
 
         @php $sub = $project->submission; @endphp
@@ -37,7 +37,7 @@
                     </div>
 
                     <button class="btn btn-primary"><i class="bi bi-upload me-1"></i> Submit Final Project</button>
-                    <a href="{{ route('student.project.show') }}" class="btn btn-link">Cancel</a>
+                    <a href="{{ route('student.project.show') }}" class="btn btn-link"><i class="bi bi-arrow-left me-1"></i>Cancel</a>
                 </form>
             </div>
         </div>

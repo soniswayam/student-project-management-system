@@ -7,18 +7,14 @@
     <title>@yield('title', 'Dashboard') — {{ config('app.name') }}</title>
 
     {{-- Bootstrap 5 + Icons (CDN) --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-    <style>
-        body { background:#f4f6f9; }
-        .sidebar { min-height: calc(100vh - 56px); background:#1e293b; }
-        .sidebar .nav-link { color:#cbd5e1; border-radius:.4rem; margin:.15rem .5rem; }
-        .sidebar .nav-link:hover { background:#334155; color:#fff; }
-        .sidebar .nav-link.active { background:#2563eb; color:#fff; }
-        .stat-card { border:none; border-radius:.75rem; }
-        .stat-card .display-6 { font-weight:700; }
-        .card { border:none; box-shadow:0 1px 3px rgba(0,0,0,.08); border-radius:.6rem; }
-    </style>
+
+    {{-- App design system (loaded after Bootstrap so tokens & polish win) --}}
+    <link rel="stylesheet" href="{{ asset('assets/css/theme.css') }}?v={{ filemtime(public_path('assets/css/theme.css')) }}">
+    <meta name="theme-color" content="#2563eb">
     @stack('styles')
 </head>
 <body>
@@ -26,10 +22,17 @@
     @include('partials.navbar')
     <div class="container-fluid">
         <div class="row">
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar p-2">
-                @include('partials.sidebar')
-            </nav>
-            <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4 py-4">
+            {{-- Sidebar: static column on lg+, slide-in offcanvas below lg --}}
+            <div class="offcanvas-lg offcanvas-start sidebar col-lg-2 col-md-3 p-0" tabindex="-1" id="sidebarMenu">
+                <div class="offcanvas-header d-lg-none border-bottom">
+                    <span class="fw-bold text-dark"><i class="bi bi-mortarboard-fill me-1 text-primary"></i> Menu</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu" aria-label="Close"></button>
+                </div>
+                <div class="offcanvas-body d-block p-2">
+                    @include('partials.sidebar')
+                </div>
+            </div>
+            <main class="col px-3 px-md-4 py-4">
                 @include('partials.alerts')
                 @yield('content')
             </main>
@@ -42,6 +45,7 @@
 @endauth
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ asset('assets/js/app.js') }}?v={{ filemtime(public_path('assets/js/app.js')) }}"></script>
 @stack('scripts')
 </body>
 </html>

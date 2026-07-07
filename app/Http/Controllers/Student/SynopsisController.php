@@ -3,14 +3,12 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Student\StoreSynopsisRequest;
 use App\Models\Project;
 use App\Models\ProjectMember;
 use App\Models\Student;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class SynopsisController extends Controller
 {
@@ -36,7 +34,7 @@ class SynopsisController extends Controller
     }
 
     /** Store the synopsis and create the project. */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreSynopsisRequest $request): RedirectResponse
     {
         $student = auth()->user()->student;
 
@@ -45,40 +43,10 @@ class SynopsisController extends Controller
                 ->with('info', 'You have already submitted a synopsis.');
         }
 
-        $data = $request->validate([
-            'project_type' => ['required', 'in:single,group'],
-            'name' => ['required', 'string', 'max:255'],
-            'frontend_tech' => ['required', 'string', 'max:255'],
-            'backend_tech' => ['required', 'string', 'max:255'],
-            'abstract' => ['required', 'string', 'min:30'],
-            // Partner is required only for group projects.
-            'partner_student_id' => [
-                Rule::requiredIf(fn () => $request->input('project_type') === 'group'),
-                'nullable',
-                'exists:students,id',
-            ],
-        ], [
-            'partner_student_id.required' => 'Please select a partner for a group project.',
-        ]);
-
+        // Validation (including leader ≠ partner and partner-availability rules)
+        // lives in StoreSynopsisRequest.
+        $data = $request->validated();
         $partnerId = $data['project_type'] === 'group' ? (int) $data['partner_student_id'] : null;
-
-        // Rule: leader and partner cannot be the same person.
-        if ($partnerId && $partnerId === $student->id) {
-            throw ValidationException::withMessages([
-                'partner_student_id' => 'The partner cannot be the same as the leader.',
-            ]);
-        }
-
-        // Rule: a student can join only one project (max 2 members per project).
-        if ($partnerId) {
-            $partner = Student::findOrFail($partnerId);
-            if ($partner->hasProject()) {
-                throw ValidationException::withMessages([
-                    'partner_student_id' => 'The selected partner already belongs to another project.',
-                ]);
-            }
-        }
 
         DB::transaction(function () use ($data, $student, $partnerId) {
             $project = Project::create([

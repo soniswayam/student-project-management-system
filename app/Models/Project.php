@@ -24,11 +24,19 @@ class Project extends Model
 
     // ----- Status constants -----
     public const STATUS_SYNOPSIS_PENDING = 'Synopsis Pending';
+
     public const STATUS_SYNOPSIS_REVIEW = 'Synopsis Under Review';
+
     public const STATUS_SYNOPSIS_APPROVED = 'Synopsis Approved';
+
     public const STATUS_CORRECTION = 'Correction Required';
+
+    public const STATUS_REJECTED = 'Rejected';
+
     public const STATUS_FINAL_SUBMITTED = 'Final Submitted';
+
     public const STATUS_FINAL_REVIEWED = 'Final Reviewed';
+
     public const STATUS_COMPLETED = 'Completed';
 
     // ----- Relationships -----
@@ -80,6 +88,22 @@ class Project extends Model
         ], true);
     }
 
+    /** True once the student has submitted the final project (or beyond). */
+    public function isSubmitted(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_FINAL_SUBMITTED,
+            self::STATUS_FINAL_REVIEWED,
+            self::STATUS_COMPLETED,
+        ], true);
+    }
+
+    /** True only when the project is completed and graded. */
+    public function isCompleted(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED && $this->marks !== null;
+    }
+
     /** Bootstrap badge colour for the current status. */
     public function statusColor(): string
     {
@@ -88,6 +112,7 @@ class Project extends Model
             self::STATUS_SYNOPSIS_REVIEW => 'info',
             self::STATUS_SYNOPSIS_APPROVED => 'primary',
             self::STATUS_CORRECTION => 'warning',
+            self::STATUS_REJECTED => 'danger',
             self::STATUS_FINAL_SUBMITTED => 'info',
             self::STATUS_FINAL_REVIEWED => 'primary',
             self::STATUS_COMPLETED => 'success',

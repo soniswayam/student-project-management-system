@@ -11,8 +11,11 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
+        if ($user->isStaff()) {
+            return redirect()->route('admin.dashboard');
+        }
+
         return match ($user->role) {
-            'admin' => redirect()->route('admin.dashboard'),
             'faculty' => redirect()->route('faculty.dashboard'),
             default => redirect()->route('student.dashboard'),
         };

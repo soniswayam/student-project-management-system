@@ -2,7 +2,7 @@
 @section('title', 'Faculty Dashboard')
 
 @section('content')
-<h3 class="mb-4">Faculty Dashboard</h3>
+<h3 class="mb-4"><i class="bi bi-speedometer2 me-2"></i>Faculty Dashboard</h3>
 
 <div class="row g-3 mb-4">
     @foreach([
@@ -10,12 +10,15 @@
         ['Synopsis to Review', $stats['pending_synopsis'], 'hourglass-split', 'warning'],
         ['Final to Review', $stats['pending_final'], 'inbox', 'info'],
         ['Completed', $stats['completed'], 'check2-circle', 'success'],
-    ] as [$label, $value, $icon, $color])
-        <div class="col-md-3">
-            <div class="card stat-card bg-{{ $color }} text-white">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div><div class="display-6">{{ $value }}</div><div>{{ $label }}</div></div>
-                    <i class="bi bi-{{ $icon }} fs-1 opacity-50"></i>
+    ] as [$label, $value, $icon, $tone])
+        <div class="col-6 col-md-3">
+            <div class="card stat-tile h-100">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <span class="stat-ico tone-{{ $tone }}"><i class="bi bi-{{ $icon }}"></i></span>
+                    <div>
+                        <div class="stat-num">{{ $value }}</div>
+                        <div class="stat-label">{{ $label }}</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -34,7 +37,7 @@
                     <td>{{ $project->leader?->user?->name ?? '—' }}</td>
                     <td>{{ ucfirst($project->project_type) }}</td>
                     <td><span class="badge bg-{{ $project->statusColor() }}">{{ $project->status }}</span></td>
-                    <td class="text-end"><a href="{{ route('faculty.projects.show', $project) }}" class="btn btn-sm btn-outline-primary">Review</a></td>
+                    <td class="text-end"><a href="{{ route('faculty.projects.show', $project) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye me-1"></i>Review</a></td>
                 </tr>
             @empty
                 <tr><td colspan="5" class="text-center text-muted py-4">No projects assigned to you yet.</td></tr>

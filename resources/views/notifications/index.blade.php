@@ -7,7 +7,7 @@
     @if($notifications->total())
         <form method="POST" action="{{ route('notifications.readAll') }}">
             @csrf
-            <button class="btn btn-sm btn-outline-secondary">Mark all as read</button>
+            <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-check-lg me-1"></i>Mark all as read</button>
         </form>
     @endif
 </div>

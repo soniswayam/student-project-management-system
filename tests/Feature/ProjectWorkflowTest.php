@@ -22,6 +22,7 @@ class ProjectWorkflowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(\Database\Seeders\RoleSeeder::class);
         $this->dept = Department::create(['name' => 'CSE', 'code' => 'CSE']);
     }
 
@@ -171,7 +172,13 @@ class ProjectWorkflowTest extends TestCase
     {
         $leader = $this->makeStudent('leader@test.com', 'R1');
 
-        $this->actingAs($leader->user)->get(route('admin.dashboard'))->assertForbidden();
-        $this->actingAs($leader->user)->get(route('faculty.dashboard'))->assertForbidden();
+        // Cross-role access is redirected back to the user's own dashboard
+        // (with an error flash) instead of dead-ending on a 403 page.
+        $this->actingAs($leader->user)->get(route('admin.dashboard'))
+            ->assertRedirect(route('dashboard'))
+            ->assertSessionHas('error');
+
+        $this->actingAs($leader->user)->get(route('faculty.dashboard'))
+            ->assertRedirect(route('dashboard'));
     }
 }

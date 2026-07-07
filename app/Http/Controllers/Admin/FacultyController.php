@@ -3,24 +3,37 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreFacultyRequest;
+use App\Http\Requests\Admin\UpdateFacultyRequest;
 use App\Models\Department;
 use App\Models\Faculty;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rules\Password;
 
 class FacultyController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $faculties = Faculty::with('user', 'department')
-            ->withCount('assignments')
-            ->orderBy('id')
-            ->paginate(15);
+        $query = Faculty::with('user', 'departments')->withCount('assignments');
 
-        return view('admin.faculties.index', compact('faculties'));
+        // Search by name / email.
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%"));
+        }
+
+        // Filter by any department the faculty teaches (not just the primary).
+        if ($request->filled('department_id')) {
+            $query->whereHas('departments', fn ($d) => $d->where('departments.id', $request->department_id));
+        }
+
+        $faculties = $query->orderBy('id')->paginate(15)->withQueryString();
+        $departments = Department::orderBy('name')->get();
+
+        return view('admin.faculties.index', compact('faculties', 'departments'));
     }
 
     public function create()
@@ -30,16 +43,9 @@ class FacultyController extends Controller
         return view('admin.faculties.create', compact('departments'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreFacultyRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:users,email'],
-            'department_id' => ['required', 'exists:departments,id'],
-            'designation' => ['nullable', 'string', 'max:100'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'password' => ['required', 'confirmed', Password::min(6)],
-        ]);
+        $data = $request->validated();
 
         DB::transaction(function () use ($data) {
             $user = User::create([
@@ -49,12 +55,15 @@ class FacultyController extends Controller
                 'role' => 'faculty',
             ]);
 
-            Faculty::create([
+            $faculty = Faculty::create([
                 'user_id' => $user->id,
-                'department_id' => $data['department_id'],
+                // First selected department is the primary/home department.
+                'department_id' => $data['department_ids'][0],
                 'designation' => $data['designation'] ?? null,
                 'phone' => $data['phone'] ?? null,
             ]);
+
+            $faculty->departments()->sync($data['department_ids']);
         });
 
         return redirect()->route('admin.faculties.index')->with('success', 'Faculty created.');
@@ -62,22 +71,16 @@ class FacultyController extends Controller
 
     public function edit(Faculty $faculty)
     {
-        $faculty->load('user');
+        $faculty->load('user', 'departments');
         $departments = Department::orderBy('name')->get();
+        $selectedDepartments = $faculty->departments->pluck('id')->all();
 
-        return view('admin.faculties.edit', compact('faculty', 'departments'));
+        return view('admin.faculties.edit', compact('faculty', 'departments', 'selectedDepartments'));
     }
 
-    public function update(Request $request, Faculty $faculty): RedirectResponse
+    public function update(UpdateFacultyRequest $request, Faculty $faculty): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:users,email,' . $faculty->user_id],
-            'department_id' => ['required', 'exists:departments,id'],
-            'designation' => ['nullable', 'string', 'max:100'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'password' => ['nullable', 'confirmed', Password::min(6)],
-        ]);
+        $data = $request->validated();
 
         DB::transaction(function () use ($data, $faculty) {
             $faculty->user->update([
@@ -86,10 +89,12 @@ class FacultyController extends Controller
             ] + (! empty($data['password']) ? ['password' => $data['password']] : []));
 
             $faculty->update([
-                'department_id' => $data['department_id'],
+                'department_id' => $data['department_ids'][0],
                 'designation' => $data['designation'] ?? null,
                 'phone' => $data['phone'] ?? null,
             ]);
+
+            $faculty->departments()->sync($data['department_ids']);
         });
 
         return redirect()->route('admin.faculties.index')->with('success', 'Faculty updated.');

@@ -15,11 +15,16 @@
             <div class="col-md-6 mb-2"><span class="text-muted small">Assigned Faculty</span><br>
                 {{ $project->assignment?->faculty?->user?->name ?? 'Not assigned yet' }}
             </div>
-            <div class="col-md-6 mb-2"><span class="text-muted small">Marks</span><br>
-                {{ $project->marks !== null ? $project->marks . ' / 100' : '—' }}
+            @php $hideResult = auth()->user()->isStudent() && ! $project->isCompleted(); @endphp
+            <div class="col-md-6 mb-2"><span class="text-muted small">Final Result</span><br>
+                @if($hideResult)
+                    <span class="text-muted">Result awaited</span>
+                @else
+                    {{ $project->marks !== null ? $project->marks . ' / 100' : '—' }}
+                @endif
             </div>
             <div class="col-12 mb-2"><span class="text-muted small">Abstract / Synopsis</span><br>{{ $project->abstract }}</div>
-            @if($project->final_remarks)
+            @if($project->final_remarks && ! $hideResult)
                 <div class="col-12"><span class="text-muted small">Final Remarks</span><br>{{ $project->final_remarks }}</div>
             @endif
         </div>

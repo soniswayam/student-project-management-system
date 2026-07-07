@@ -1,0 +1,603 @@
+/* =====================================================================
+   Student Project Management System — Design System
+   ---------------------------------------------------------------------
+   A single, token-driven theme layered on top of Bootstrap 5.3.
+   Overriding Bootstrap's CSS variables here restyles every existing
+   page (badges, cards, tables, alerts) with no markup changes, then
+   we add component polish for the shell, buttons, forms and data views.
+   Direction: calm, professional minimalism — simple and easy to use.
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap');
+
+/* ---------------------------------------------------------------------
+   1. Design tokens
+   ------------------------------------------------------------------- */
+:root {
+    /* Brand */
+    --color-primary:      #2563eb;
+    --color-primary-600:  #1d4ed8;
+    --color-primary-700:  #1e40af;
+    --color-primary-soft: #eef4ff;
+
+    --color-success:      #059669;
+    --color-success-600:  #047857;
+    --color-success-soft: #e7f6f0;
+
+    --color-warning:      #d97706;
+    --color-warning-600:  #b45309;
+    --color-warning-soft: #fdf3e6;
+
+    --color-danger:       #dc2626;
+    --color-danger-600:   #b91c1c;
+    --color-danger-soft:  #fdecec;
+
+    --color-info:         #0ea5e9;
+    --color-info-soft:    #e6f6fd;
+
+    /* Neutrals */
+    --color-canvas:    #f4f6fb;
+    --color-surface:   #ffffff;
+    --color-muted:     #f1f5f9;
+    --color-border:    #e5e9f2;
+    --color-ink:       #0f172a;   /* headings */
+    --color-body:      #334155;   /* body text */
+    --color-subtle:    #64748b;   /* muted text */
+
+    /* Shape & depth */
+    --radius-sm: .5rem;
+    --radius:    .75rem;
+    --radius-lg: 1rem;
+    --shadow-xs: 0 1px 2px rgba(15, 23, 42, .06);
+    --shadow-sm: 0 1px 3px rgba(15, 23, 42, .08), 0 1px 2px rgba(15, 23, 42, .04);
+    --shadow-md: 0 4px 16px rgba(15, 23, 42, .08);
+    --shadow-lg: 0 12px 32px rgba(15, 23, 42, .12);
+
+    /* Layout */
+    --navbar-h: 60px;
+    --sidebar-w: 250px;
+
+    /* --- Bootstrap variable overrides (recolour built-in utilities) --- */
+    --bs-primary:      #2563eb;   --bs-primary-rgb: 37, 99, 235;
+    --bs-secondary:    #64748b;   --bs-secondary-rgb: 100, 116, 139;
+    --bs-success:      #059669;   --bs-success-rgb: 5, 150, 105;
+    --bs-info:         #0ea5e9;   --bs-info-rgb: 14, 165, 233;
+    --bs-warning:      #d97706;   --bs-warning-rgb: 217, 119, 6;
+    --bs-danger:       #dc2626;   --bs-danger-rgb: 220, 38, 38;
+    --bs-light:        #f1f5f9;   --bs-light-rgb: 241, 245, 249;
+    --bs-dark:         #0f172a;   --bs-dark-rgb: 15, 23, 42;
+
+    --bs-body-color:   #334155;   --bs-body-color-rgb: 51, 65, 85;
+    --bs-body-bg:      #f4f6fb;
+    --bs-emphasis-color: #0f172a;
+    --bs-border-color: #e5e9f2;
+    --bs-border-radius:    .75rem;
+    --bs-border-radius-sm: .5rem;
+    --bs-border-radius-lg: 1rem;
+
+    --bs-link-color:        #2563eb;  --bs-link-color-rgb: 37, 99, 235;
+    --bs-link-hover-color:  #1d4ed8;  --bs-link-hover-color-rgb: 29, 78, 216;
+
+    --bs-font-sans-serif: 'Fira Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --bs-font-monospace:  'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --bs-body-font-family: var(--bs-font-sans-serif);
+}
+
+/* ---------------------------------------------------------------------
+   2. Base
+   ------------------------------------------------------------------- */
+body {
+    background: var(--color-canvas);
+    color: var(--color-body);
+    font-family: var(--bs-font-sans-serif);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+    color: var(--color-ink);
+    font-weight: 600;
+    letter-spacing: -.01em;
+}
+
+a { text-decoration: none; }
+a:hover { text-decoration: underline; }
+.text-muted { color: var(--color-subtle) !important; }
+
+/* Numbers align cleanly in tables, stats and prices */
+.stat-card .display-6, table td, table th, .badge, .font-tnum {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Clear, consistent keyboard focus everywhere */
+:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 .2rem rgba(37, 99, 235, .35);
+    border-radius: var(--radius-sm);
+}
+.btn:focus-visible,
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    box-shadow: 0 0 0 .2rem rgba(37, 99, 235, .25);
+}
+
+/* Every interactive element gets a pointer cursor */
+.btn, .nav-link, .page-link, .dropdown-item,
+[role="button"], summary, label.form-check-label { cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+/* ---------------------------------------------------------------------
+   3. Top navbar
+   ------------------------------------------------------------------- */
+.app-navbar {
+    background: var(--color-surface);
+    min-height: var(--navbar-h);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-xs);
+}
+.app-navbar .navbar-brand {
+    color: var(--color-ink);
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+.app-navbar .navbar-brand .bi { color: var(--color-primary); }
+.app-navbar .nav-icon-btn {
+    color: var(--color-subtle);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    transition: background .15s ease, color .15s ease;
+}
+.app-navbar .nav-icon-btn:hover { background: var(--color-muted); color: var(--color-ink); }
+.app-navbar .user-menu {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    color: var(--color-ink);
+    padding: .3rem .5rem;
+    border-radius: 999px;
+    transition: background .15s ease;
+}
+.app-navbar .user-menu:hover { background: var(--color-muted); }
+.app-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-weight: 600;
+    flex: 0 0 auto;
+}
+.app-navbar .navbar-toggler { color: var(--color-ink); }
+
+/* ---------------------------------------------------------------------
+   4. Sidebar (light, grouped)
+   ------------------------------------------------------------------- */
+.sidebar {
+    min-height: calc(100vh - var(--navbar-h));
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-border);
+}
+.sidebar .nav {
+    gap: .1rem;
+    padding: .5rem .5rem 1.5rem;
+}
+.sidebar .nav-section {
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--color-subtle);
+    padding: 1rem .85rem .35rem;
+}
+.sidebar .nav-link {
+    display: flex;
+    align-items: center;
+    gap: .1rem;
+    color: var(--color-body);
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    padding: .55rem .85rem;
+    transition: background .15s ease, color .15s ease;
+}
+.sidebar .nav-link .bi {
+    font-size: 1.05rem;
+    color: var(--color-subtle);
+    transition: color .15s ease;
+}
+.sidebar .nav-link:hover {
+    background: var(--color-muted);
+    color: var(--color-ink);
+    text-decoration: none;
+}
+.sidebar .nav-link:hover .bi { color: var(--color-primary); }
+.sidebar .nav-link.active {
+    background: var(--color-primary-soft);
+    color: var(--color-primary-700);
+    font-weight: 600;
+}
+.sidebar .nav-link.active .bi { color: var(--color-primary); }
+
+/* On phones the sidebar becomes a dark-scrimmed offcanvas panel */
+@media (max-width: 991.98px) {
+    .sidebar { min-height: auto; width: var(--sidebar-w); }
+}
+
+/* ---------------------------------------------------------------------
+   5. Cards
+   ------------------------------------------------------------------- */
+.card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+}
+.card-header {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    font-weight: 600;
+    color: var(--color-ink);
+    padding: .9rem 1.1rem;
+    border-top-left-radius: var(--radius);
+    border-top-right-radius: var(--radius);
+}
+.card-body { padding: 1.1rem; }
+.list-group-item { border-color: var(--color-border); padding: .7rem 1.1rem; }
+
+/* ---------------------------------------------------------------------
+   6. Buttons
+   ------------------------------------------------------------------- */
+.btn {
+    --bs-btn-font-weight: 500;
+    --bs-btn-border-radius: var(--radius-sm);
+    --bs-btn-padding-y: .5rem;
+    --bs-btn-padding-x: 1rem;
+    transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, color .15s ease;
+}
+.btn-sm { --bs-btn-border-radius: .45rem; }
+.btn-lg { --bs-btn-border-radius: var(--radius); }
+
+.btn-primary {
+    --bs-btn-bg: var(--color-primary);            --bs-btn-border-color: var(--color-primary);
+    --bs-btn-hover-bg: var(--color-primary-600);  --bs-btn-hover-border-color: var(--color-primary-600);
+    --bs-btn-active-bg: var(--color-primary-700); --bs-btn-active-border-color: var(--color-primary-700);
+    --bs-btn-disabled-bg: var(--color-primary);   --bs-btn-disabled-border-color: var(--color-primary);
+    --bs-btn-color: #fff; --bs-btn-hover-color: #fff; --bs-btn-active-color: #fff;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, .25);
+}
+.btn-success {
+    --bs-btn-bg: var(--color-success);            --bs-btn-border-color: var(--color-success);
+    --bs-btn-hover-bg: var(--color-success-600);  --bs-btn-hover-border-color: var(--color-success-600);
+    --bs-btn-active-bg: var(--color-success-600); --bs-btn-active-border-color: var(--color-success-600);
+    --bs-btn-color: #fff; --bs-btn-hover-color: #fff; --bs-btn-active-color: #fff;
+}
+.btn-warning {
+    --bs-btn-bg: var(--color-warning);            --bs-btn-border-color: var(--color-warning);
+    --bs-btn-hover-bg: var(--color-warning-600);  --bs-btn-hover-border-color: var(--color-warning-600);
+    --bs-btn-color: #fff; --bs-btn-hover-color: #fff; --bs-btn-active-color: #fff;
+}
+.btn-danger {
+    --bs-btn-bg: var(--color-danger);             --bs-btn-border-color: var(--color-danger);
+    --bs-btn-hover-bg: var(--color-danger-600);   --bs-btn-hover-border-color: var(--color-danger-600);
+    --bs-btn-color: #fff; --bs-btn-hover-color: #fff; --bs-btn-active-color: #fff;
+}
+
+/* Outline buttons share the palette and fill on hover */
+.btn-outline-primary   { --bs-btn-color: var(--color-primary);  --bs-btn-border-color: var(--color-border); --bs-btn-hover-bg: var(--color-primary); --bs-btn-hover-border-color: var(--color-primary); --bs-btn-active-bg: var(--color-primary-600); --bs-btn-active-border-color: var(--color-primary-600); }
+.btn-outline-success   { --bs-btn-color: var(--color-success);  --bs-btn-border-color: var(--color-border); --bs-btn-hover-bg: var(--color-success); --bs-btn-hover-border-color: var(--color-success); }
+.btn-outline-warning   { --bs-btn-color: var(--color-warning);  --bs-btn-border-color: var(--color-border); --bs-btn-hover-bg: var(--color-warning); --bs-btn-hover-border-color: var(--color-warning); --bs-btn-hover-color: #fff; }
+.btn-outline-danger    { --bs-btn-color: var(--color-danger);   --bs-btn-border-color: var(--color-border); --bs-btn-hover-bg: var(--color-danger);  --bs-btn-hover-border-color: var(--color-danger); }
+.btn-outline-secondary { --bs-btn-color: var(--color-body);     --bs-btn-border-color: var(--color-border); --bs-btn-hover-bg: var(--color-muted); --bs-btn-hover-border-color: var(--color-subtle); --bs-btn-hover-color: var(--color-ink); }
+.btn-outline-light     { --bs-btn-color: #fff; --bs-btn-border-color: rgba(255,255,255,.6); --bs-btn-hover-bg: #fff; --bs-btn-hover-color: var(--color-ink); }
+
+/* ---------------------------------------------------------------------
+   7. Forms
+   ------------------------------------------------------------------- */
+.form-label {
+    font-weight: 500;
+    color: var(--color-ink);
+    margin-bottom: .35rem;
+}
+.form-control, .form-select {
+    border-color: var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: .55rem .75rem;
+    color: var(--color-ink);
+    background-color: var(--color-surface);
+}
+.form-control::placeholder { color: #94a3b8; }
+.form-control:focus, .form-select:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 .2rem rgba(37, 99, 235, .18);
+}
+.form-check-input:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+.input-group-text {
+    background: var(--color-muted);
+    border-color: var(--color-border);
+    color: var(--color-subtle);
+}
+.was-validated .form-control:invalid, .form-control.is-invalid { border-color: var(--color-danger); }
+.invalid-feedback { color: var(--color-danger); }
+
+/* ---------------------------------------------------------------------
+   8. Tables
+   ------------------------------------------------------------------- */
+.table {
+    --bs-table-border-color: var(--color-border);
+    --bs-table-hover-bg: var(--color-primary-soft);
+    color: var(--color-body);
+    margin-bottom: 0;
+}
+.table > thead {
+    --bs-table-bg: #fff;
+}
+.table > thead th, .table-light > :not(caption) > * > * {
+    background: #fbfcfe;
+    color: var(--color-subtle);
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--color-border);
+    padding: .75rem 1rem;
+    white-space: nowrap;
+}
+.table > tbody > tr > td {
+    padding: .8rem 1rem;
+    vertical-align: middle;
+    border-color: var(--color-border);
+}
+.table-hover > tbody > tr:hover > * { background: var(--color-primary-soft); }
+
+/* ---------------------------------------------------------------------
+   9. Badges — softer, semantic tints
+   ------------------------------------------------------------------- */
+.badge {
+    font-weight: 600;
+    letter-spacing: .01em;
+    padding: .4em .65em;
+    border-radius: .5rem;
+}
+.badge.bg-primary   { background: var(--color-primary-soft) !important; color: var(--color-primary-700) !important; }
+.badge.bg-success   { background: var(--color-success-soft) !important; color: var(--color-success-600) !important; }
+.badge.bg-warning   { background: var(--color-warning-soft) !important; color: var(--color-warning-600) !important; }
+.badge.bg-danger    { background: var(--color-danger-soft)  !important; color: var(--color-danger-600)  !important; }
+.badge.bg-info      { background: var(--color-info-soft)    !important; color: #0369a1 !important; }
+.badge.bg-secondary { background: var(--color-muted) !important; color: var(--color-body) !important; }
+/* keep the notification count pill bold & attention-grabbing */
+.badge.rounded-pill.bg-danger { background: var(--color-danger) !important; color: #fff !important; }
+
+/* ---------------------------------------------------------------------
+   10. Stat cards (dashboard KPIs)
+   ------------------------------------------------------------------- */
+.stat-card {
+    border: none !important;
+    border-radius: var(--radius) !important;
+    box-shadow: var(--shadow-sm);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+a:hover > .stat-card { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.stat-card .display-6 { font-weight: 700; line-height: 1.1; }
+.stat-card .bi { opacity: .35; }
+
+/* White KPI tiles with a coloured icon chip — high contrast & accessible */
+.stat-tile { transition: transform .15s ease, box-shadow .15s ease; }
+a:hover > .stat-tile { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.stat-tile .stat-num { font-size: 1.9rem; font-weight: 700; color: var(--color-ink); line-height: 1; }
+.stat-tile .stat-label { color: var(--color-subtle); font-size: .9rem; font-weight: 500; }
+.stat-ico {
+    width: 52px; height: 52px; border-radius: 14px; flex: 0 0 auto;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 1.5rem;
+}
+.stat-ico.tone-primary { background: var(--color-primary-soft); color: var(--color-primary); }
+.stat-ico.tone-success { background: var(--color-success-soft); color: var(--color-success); }
+.stat-ico.tone-warning { background: var(--color-warning-soft); color: var(--color-warning); }
+.stat-ico.tone-danger  { background: var(--color-danger-soft);  color: var(--color-danger); }
+.stat-ico.tone-info    { background: var(--color-info-soft);    color: #0369a1; }
+
+/* ---------------------------------------------------------------------
+   11. Alerts
+   ------------------------------------------------------------------- */
+.alert {
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    padding: .85rem 1.1rem;
+}
+.alert-success { background: var(--color-success-soft); border-color: #bfe8d7; color: var(--color-success-600); }
+.alert-danger  { background: var(--color-danger-soft);  border-color: #f6cccc; color: var(--color-danger-600); }
+.alert-warning { background: var(--color-warning-soft); border-color: #f5dcb3; color: var(--color-warning-600); }
+.alert-info    { background: var(--color-info-soft);    border-color: #bee6f8; color: #0369a1; }
+
+/* ---------------------------------------------------------------------
+   12. Dropdowns, pagination, misc
+   ------------------------------------------------------------------- */
+.dropdown-menu {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: .4rem;
+}
+.dropdown-item { border-radius: var(--radius-sm); padding: .5rem .75rem; }
+.dropdown-item:active { background: var(--color-primary); }
+
+.pagination {
+    --bs-pagination-color: var(--color-body);
+    --bs-pagination-hover-color: var(--color-primary);
+    --bs-pagination-hover-bg: var(--color-primary-soft);
+    --bs-pagination-hover-border-color: var(--color-border);
+    --bs-pagination-focus-color: var(--color-primary);
+    --bs-pagination-focus-bg: var(--color-primary-soft);
+    --bs-pagination-focus-box-shadow: 0 0 0 .2rem rgba(37, 99, 235, .2);
+    --bs-pagination-active-bg: var(--color-primary);
+    --bs-pagination-active-border-color: var(--color-primary);
+    --bs-pagination-border-color: var(--color-border);
+    --bs-pagination-border-radius: var(--radius-sm);
+    --bs-pagination-disabled-color: #b6becb;
+    --bs-pagination-disabled-bg: transparent;
+    --bs-pagination-disabled-border-color: var(--color-border);
+    gap: .3rem;
+}
+.page-link {
+    min-width: 40px; height: 40px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm) !important;
+    font-weight: 600; font-size: .9rem; font-variant-numeric: tabular-nums;
+}
+.page-item.active .page-link { box-shadow: 0 2px 8px rgba(37, 99, 235, .3); }
+
+/* Row action buttons — one calm, cohesive group instead of a rainbow of outlines */
+.row-actions { display: inline-flex; align-items: center; gap: 2px; justify-content: flex-end; }
+.row-actions form { display: inline; margin: 0; }
+.row-actions .act-btn {
+    width: 34px; height: 34px; padding: 0; border: none; background: transparent;
+    color: var(--color-subtle); border-radius: 8px; font-size: 1rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background .15s ease, color .15s ease;
+}
+.row-actions .act-btn:not(:disabled):hover, .row-actions .act-btn:focus-visible { background: var(--color-muted); color: var(--color-ink); }
+.row-actions .act-view:not(:disabled):hover, .row-actions .act-edit:not(:disabled):hover { background: var(--color-primary-soft); color: var(--color-primary); }
+.row-actions .act-ok:not(:disabled):hover     { background: var(--color-success-soft); color: var(--color-success); }
+.row-actions .act-warn:not(:disabled):hover   { background: var(--color-warning-soft); color: var(--color-warning); }
+.row-actions .act-danger:not(:disabled):hover { background: var(--color-danger-soft);  color: var(--color-danger); }
+.row-actions .act-btn:disabled { opacity: .35; cursor: default; }
+@media (max-width: 575.98px) { .row-actions .act-btn { width: 38px; height: 38px; } }
+
+/* Empty-state helper */
+.empty-state { color: var(--color-subtle); }
+.empty-state .bi { color: #cbd5e1; }
+
+hr { color: var(--color-border); opacity: 1; }
+
+/* ---------------------------------------------------------------------
+   13. Responsive comfort
+   ------------------------------------------------------------------- */
+main { padding-bottom: 2.5rem; }
+.container-fluid { max-width: 1600px; }
+
+/* Wide-table overflow fix: a Bootstrap `.col` is a flex item that defaults to
+   min-width:auto, so a wide table (e.g. the 9-column Students list) stretches
+   the whole page sideways and the bottom pagination/actions get cut off.
+   Letting the content column shrink keeps tables scrolling INSIDE their card. */
+main.col, main { min-width: 0; }
+.card > .table-responsive { border-radius: inherit; }
+.table-responsive { max-width: 100%; }
+
+/* Pagination stays tidy and never overflows on narrow screens */
+.pagination { flex-wrap: wrap; row-gap: .3rem; }
+
+/* Momentum scrolling + subtle affordance for wide tables on touch devices */
+.table-responsive { -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+
+@media (max-width: 575.98px) {
+    h3 { font-size: 1.35rem; }
+    .stat-card .display-6 { font-size: 1.8rem; }
+    .stat-tile .stat-num { font-size: 1.6rem; }
+    .stat-ico { width: 44px; height: 44px; font-size: 1.25rem; }
+    .card-body { padding: .9rem; }
+    main { padding-left: .85rem !important; padding-right: .85rem !important; }
+    .btn { --bs-btn-padding-x: .85rem; }
+
+    /* Comfortable tap targets on phones (WCAG / HIG 44px) */
+    .sidebar .nav-link { min-height: 46px; }
+    .btn:not(.btn-sm) { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+    .table .btn-sm { min-height: 38px; min-width: 38px; }
+    .form-check-input { width: 1.15em; height: 1.15em; }
+
+    /* Never trigger iOS auto-zoom on focus */
+    .form-control, .form-select, .form-control-sm, .form-select-sm { font-size: 16px; }
+
+    /* Page headers with actions stack cleanly */
+    h3 + .d-flex, .d-flex.justify-content-between { row-gap: .5rem; }
+}
+
+/* ---------------------------------------------------------------------
+   Chip multi-select — faculty departments/courses
+   Native checkboxes styled as toggle chips (no JS; fills on :checked).
+   ------------------------------------------------------------------- */
+.dept-chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+.dept-chips--error { border: 1px solid var(--color-danger); border-radius: var(--radius-sm); padding: .5rem; }
+
+/* The real checkbox is visually hidden but still focusable and submitted. */
+.dept-chip-input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+
+.dept-chip {
+    display: inline-flex; align-items: center; gap: .45rem; margin: 0;
+    padding: .5rem .85rem; border: 1.5px solid var(--color-border); border-radius: 999px;
+    background: var(--color-surface); color: var(--color-body);
+    font-size: .9rem; font-weight: 500; cursor: pointer; user-select: none;
+    transition: background-color .14s ease, border-color .14s ease, color .14s ease, box-shadow .14s ease;
+}
+.dept-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+.dept-chip__tick { width: 15px; height: 15px; flex: 0 0 auto; opacity: 0; transform: scale(.6);
+    transition: opacity .14s ease, transform .14s ease; }
+
+.dept-chip-input:checked + .dept-chip {
+    background: var(--color-primary); border-color: var(--color-primary);
+    color: #fff; box-shadow: var(--shadow-sm);
+}
+.dept-chip-input:checked + .dept-chip .dept-chip__tick { opacity: 1; transform: scale(1); }
+.dept-chip-input:focus-visible + .dept-chip { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+/* ------------------------------------------------------------------ *
+ * Auth pages (login, register, forgot / reset password)
+ * Soft radial glow behind the centered card. Shared by every auth view.
+ * ------------------------------------------------------------------ */
+.auth-wrap {
+    min-height: 100vh;
+    background:
+        radial-gradient(900px 400px at 50% -5%, #e8f0ff 0%, rgba(232, 240, 255, 0) 60%),
+        var(--color-canvas);
+}
+
+/* ------------------------------------------------------------------ *
+ * Print
+ * Hide navigation & controls so only the page content is printed,
+ * and show the letterhead / signature blocks that are hidden on screen.
+ * ------------------------------------------------------------------ */
+.print-title, .print-only { display: none; }
+
+@media print {
+    .navbar, .sidebar, form[data-live-search], .pagination,
+    .btn, .no-print { display: none !important; }
+    main { width: 100% !important; max-width: 100% !important; flex: 0 0 100% !important; margin: 0 !important; }
+    body { background: #fff; color: #1e293b; }
+    .card { box-shadow: none; border: 1px solid #dee2e6; }
+    .print-title { display: block !important; }
+    .print-only { display: block !important; }
+
+    /* Letterhead shown only when printing */
+    .print-lh { text-align: center; border-bottom: 3px solid #0d3b66; padding-bottom: 8px; margin-bottom: 4px; }
+    .print-lh .logo { width: 54px; height: 54px; border: 2px solid #0d3b66; border-radius: 50%;
+        display: inline-block; line-height: 52px; font-weight: 700; font-size: 22px; color: #0d3b66; vertical-align: middle; }
+    .print-lh .cname { font-size: 20px; font-weight: 700; letter-spacing: .5px; color: #0d3b66; }
+    .print-lh .ctag { font-size: 11px; font-style: italic; color: #475569; }
+    .print-lh .caddr { font-size: 10px; color: #64748b; }
+    .print-doc-title { text-align: center; font-size: 14px; font-weight: 700; letter-spacing: 2px;
+        text-transform: uppercase; color: #0d3b66; margin: 6px 0 2px; }
+    .print-doc-meta { text-align: center; font-size: 10px; color: #64748b; margin-bottom: 10px; }
+
+    /* Signatures shown only when printing */
+    .print-sign { width: 100%; margin-top: 46px; }
+    .print-sign td { text-align: center; font-size: 11px; color: #334155; padding-top: 22px; }
+    .print-sign .line { border-top: 1px solid #334155; width: 150px; margin: 0 auto 4px; }
+
+    /* Cleaner tables on paper */
+    table { border-collapse: collapse !important; }
+    table thead th { background: #0d3b66 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .table-responsive { overflow: visible !important; }
+}
+

@@ -8,7 +8,6 @@ use App\Models\Project;
 use App\Models\ProjectSubmission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class SubmissionController extends Controller
 {
@@ -37,7 +36,7 @@ class SubmissionController extends Controller
 
         $data = $request->validate([
             'report' => [$existing && $existing->report_path ? 'nullable' : 'required', 'file', 'mimes:pdf,doc,docx', 'max:20480'],
-            'source_zip' => [$existing && $existing->source_zip_path ? 'nullable' : 'required', 'file', 'mimes:zip,rar', 'max:51200'],
+            'source_zip' => [$existing && $existing->source_zip_path ? 'nullable' : 'required', 'file', 'mimes:zip,rar', 'max:1048576'],
             'ppt' => ['nullable', 'file', 'mimes:ppt,pptx,pdf', 'max:20480'],
             'screenshots' => ['nullable', 'array', 'max:6'],
             'screenshots.*' => ['image', 'mimes:jpg,jpeg,png', 'max:5120'],

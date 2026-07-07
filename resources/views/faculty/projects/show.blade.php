@@ -3,9 +3,11 @@
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="mb-0">Review Project</h3>
+    <h3 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Review Project</h3>
     <a href="{{ route('faculty.projects.index') }}" class="btn btn-outline-secondary btn-sm">← Back</a>
 </div>
+
+@include('partials.progress_tracker')
 
 <div class="row">
     <div class="col-lg-7">
@@ -36,7 +38,7 @@
                             <label class="form-label">Comments</label>
                             <textarea name="comments" rows="4" class="form-control" placeholder="Feedback for the student..."></textarea>
                         </div>
-                        <button class="btn btn-primary w-100">Submit Synopsis Review</button>
+                        <button class="btn btn-primary w-100"><i class="bi bi-send me-1"></i>Submit Synopsis Review</button>
                     </form>
                 </div>
             </div>
@@ -50,8 +52,8 @@
                     <form method="POST" action="{{ route('faculty.projects.reviewFinal', $project) }}">
                         @csrf
                         <div class="mb-3">
-                            <label class="form-label">Marks (out of 100)</label>
-                            <input type="number" name="marks" min="0" max="100" value="{{ $project->marks }}" class="form-control" required>
+                            <label class="form-label">Marks (out of 100) <span class="text-muted">(optional)</span></label>
+                            <input type="number" name="marks" min="0" max="100" value="{{ $project->marks }}" class="form-control">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Comments</label>
@@ -65,7 +67,7 @@
                             <input type="checkbox" name="complete" value="1" class="form-check-input" id="complete">
                             <label class="form-check-label" for="complete">Mark project as <strong>Completed</strong></label>
                         </div>
-                        <button class="btn btn-primary w-100">Submit Final Review</button>
+                        <button class="btn btn-primary w-100"><i class="bi bi-send me-1"></i>Submit Final Review</button>
                     </form>
                 </div>
             </div>

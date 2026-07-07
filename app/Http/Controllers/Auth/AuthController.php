@@ -34,6 +34,21 @@ class AuthController extends Controller
                 ->onlyInput('email');
         }
 
+        // Only active accounts may sign in. Pending students wait for admin
+        // approval; blocked accounts are refused entirely.
+        $user = Auth::user();
+        if ($user->isStudent() && ! $user->isActive()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            $message = $user->isPending()
+                ? 'Your account is waiting for admin approval.'
+                : 'Your account has been blocked. Please contact the administrator.';
+
+            return back()->withErrors(['email' => $message])->onlyInput('email');
+        }
+
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard'));
@@ -58,6 +73,7 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'roll_no' => ['required', 'string', 'max:50', 'unique:students,roll_no'],
             'department_id' => ['required', 'exists:departments,id'],
+            'semester' => ['required', 'string', 'max:20'],
             'phone' => ['nullable', 'string', 'max:20'],
             'password' => ['required', 'confirmed', Password::min(6)],
         ]);
@@ -68,19 +84,22 @@ class AuthController extends Controller
                 'email' => $data['email'],
                 'password' => $data['password'],
                 'role' => 'student',
+                'status' => User::STATUS_PENDING,
             ]);
 
             Student::create([
                 'user_id' => $user->id,
                 'department_id' => $data['department_id'],
                 'roll_no' => $data['roll_no'],
+                'semester' => $data['semester'] ?? null,
                 'phone' => $data['phone'] ?? null,
             ]);
-
-            Auth::login($user);
         });
 
-        return redirect()->route('dashboard');
+        // Self-registered students stay pending until an admin approves them,
+        // so we do NOT log them in — send them to the login page with a notice.
+        return redirect()->route('login')
+            ->with('success', 'Registration received. Your account is waiting for admin approval.');
     }
 
     /** Log the user out. */

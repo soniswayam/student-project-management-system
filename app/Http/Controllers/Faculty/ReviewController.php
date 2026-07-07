@@ -3,23 +3,21 @@
 namespace App\Http\Controllers\Faculty;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Faculty\ReviewFinalRequest;
+use App\Http\Requests\Faculty\ReviewSynopsisRequest;
 use App\Models\Notification;
 use App\Models\Project;
 use App\Models\ProjectReview;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 
 class ReviewController extends Controller
 {
     /** Review a synopsis: approve / reject / request correction. */
-    public function reviewSynopsis(Request $request, Project $project): RedirectResponse
+    public function reviewSynopsis(ReviewSynopsisRequest $request, Project $project): RedirectResponse
     {
         $faculty = $this->authorizeProject($project);
 
-        $data = $request->validate([
-            'action' => ['required', 'in:approved,rejected,correction'],
-            'comments' => ['nullable', 'string', 'max:2000'],
-        ]);
+        $data = $request->validated();
 
         ProjectReview::create([
             'project_id' => $project->id,
@@ -31,14 +29,14 @@ class ReviewController extends Controller
 
         $status = match ($data['action']) {
             'approved' => Project::STATUS_SYNOPSIS_APPROVED,
-            'rejected' => Project::STATUS_SYNOPSIS_REVIEW, // stays under review; rejected recorded in history
+            'rejected' => Project::STATUS_REJECTED,
             'correction' => Project::STATUS_CORRECTION,
         };
         $project->update(['status' => $status]);
 
         $this->notifyMembers(
             $project,
-            'Synopsis ' . ucfirst($data['action']),
+            'Synopsis '.ucfirst($data['action']),
             "Your synopsis for \"{$project->name}\" was marked: {$data['action']}."
         );
 
@@ -46,7 +44,7 @@ class ReviewController extends Controller
     }
 
     /** Review the final submission and award marks. */
-    public function reviewFinal(Request $request, Project $project): RedirectResponse
+    public function reviewFinal(ReviewFinalRequest $request, Project $project): RedirectResponse
     {
         $faculty = $this->authorizeProject($project);
 
@@ -55,12 +53,7 @@ class ReviewController extends Controller
             return back()->with('error', 'The student has not submitted the final project yet.');
         }
 
-        $data = $request->validate([
-            'comments' => ['nullable', 'string', 'max:2000'],
-            'marks' => ['required', 'integer', 'min:0', 'max:100'],
-            'final_remarks' => ['nullable', 'string', 'max:2000'],
-            'complete' => ['nullable', 'boolean'],
-        ]);
+        $data = $request->validated();
 
         ProjectReview::create([
             'project_id' => $project->id,
@@ -68,21 +61,22 @@ class ReviewController extends Controller
             'stage' => 'final',
             'action' => 'reviewed',
             'comments' => $data['comments'] ?? null,
-            'marks' => $data['marks'],
+            'marks' => $data['marks'] ?? null,
         ]);
 
         $project->update([
-            'marks' => $data['marks'],
+            'marks' => $data['marks'] ?? null,
             'final_remarks' => $data['final_remarks'] ?? null,
             'status' => $request->boolean('complete')
                 ? Project::STATUS_COMPLETED
                 : Project::STATUS_FINAL_REVIEWED,
         ]);
 
+        $marksNote = isset($data['marks']) ? " Marks: {$data['marks']}/100." : '';
         $this->notifyMembers(
             $project,
             'Final project reviewed',
-            "Your project \"{$project->name}\" was reviewed. Marks: {$data['marks']}/100."
+            "Your project \"{$project->name}\" was reviewed.".$marksNote
         );
 
         return back()->with('success', 'Final review submitted.');

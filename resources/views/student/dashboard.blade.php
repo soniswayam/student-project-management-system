@@ -21,35 +21,7 @@
     </div>
 @else
     {{-- Progress tracker --}}
-    @php
-        $steps = [
-            'Synopsis Under Review' => 1,
-            'Correction Required'   => 1,
-            'Synopsis Approved'     => 2,
-            'Final Submitted'       => 3,
-            'Final Reviewed'        => 4,
-            'Completed'             => 4,
-        ];
-        $current = $steps[$project->status] ?? 1;
-    @endphp
-
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="mb-4">Project Progress — <span class="badge bg-{{ $project->statusColor() }}">{{ $project->status }}</span></h5>
-            <div class="row text-center">
-                @foreach(['1. Synopsis','2. Approved','3. Final Upload','4. Reviewed'] as $i => $label)
-                    <div class="col">
-                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center
-                                    {{ $current >= $i+1 ? 'bg-success text-white' : 'bg-light text-muted' }}"
-                             style="width:48px;height:48px;font-weight:700">
-                            {{ $current > $i+1 ? '✓' : $i+1 }}
-                        </div>
-                        <div class="small mt-2 {{ $current >= $i+1 ? 'fw-semibold' : 'text-muted' }}">{{ $label }}</div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    </div>
+    @include('partials.progress_tracker')
 
     <div class="row">
         <div class="col-lg-7">
@@ -71,9 +43,13 @@
                         <a href="{{ route('student.submission.create') }}" class="btn btn-primary w-100"><i class="bi bi-upload me-1"></i> Upload Final Project</a>
                     @elseif($project->status === \App\Models\Project::STATUS_FINAL_SUBMITTED)
                         <p class="mb-2"><i class="bi bi-hourglass text-info"></i> Final project submitted. Awaiting faculty review.</p>
+                        <a href="{{ route('student.project.certificate') }}" class="btn btn-success w-100 mb-2"><i class="bi bi-award me-1"></i> Download Certificate</a>
                         <a href="{{ route('student.submission.create') }}" class="btn btn-outline-secondary w-100">Re-upload Files</a>
-                    @elseif(in_array($project->status, [\App\Models\Project::STATUS_FINAL_REVIEWED, \App\Models\Project::STATUS_COMPLETED]))
-                        <p class="mb-0"><i class="bi bi-award text-success"></i> Reviewed! Your marks: <strong>{{ $project->marks }}/100</strong></p>
+                    @elseif($project->status === \App\Models\Project::STATUS_FINAL_REVIEWED)
+                        <p class="mb-0"><i class="bi bi-hourglass text-info"></i> Your project is reviewed — the final result will be declared soon.</p>
+                    @elseif($project->status === \App\Models\Project::STATUS_COMPLETED)
+                        <p class="mb-2"><i class="bi bi-award text-success"></i> Result declared! Your final result: <strong>{{ $project->marks }}/100</strong></p>
+                        <a href="{{ route('student.project.certificate') }}" class="btn btn-success w-100"><i class="bi bi-award me-1"></i> Download Certificate</a>
                     @endif
                 </div>
             </div>

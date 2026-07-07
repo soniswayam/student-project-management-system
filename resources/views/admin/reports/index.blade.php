@@ -2,31 +2,39 @@
 @section('title', 'Reports')
 
 @section('content')
-<h3 class="mb-3">Reports &amp; Analytics</h3>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Reports &amp; Analytics</h3>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.reports.export') }}" class="btn btn-danger"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+        <a href="{{ route('admin.projects.export') }}" class="btn btn-success"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+        <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer"></i> Print</button>
+    </div>
+</div>
+<div class="print-title mb-2"><h4>{{ config('college.name') }} — Projects Analytics Report</h4><small>Printed on {{ now()->format('d M Y') }}</small></div>
 
 <div class="row g-3 mb-3">
-    <div class="col-md-6">
+    <div class="col-md-7">
         <div class="card h-100">
             <div class="card-header bg-white fw-semibold">Projects by Status</div>
-            <ul class="list-group list-group-flush">
-                @forelse($byStatus as $status => $count)
-                    <li class="list-group-item d-flex justify-content-between">{{ $status }}<span class="badge bg-secondary rounded-pill">{{ $count }}</span></li>
-                @empty
-                    <li class="list-group-item text-muted">No data.</li>
-                @endforelse
-            </ul>
+            <div class="card-body">
+                @if($byStatus->isNotEmpty())
+                    <canvas id="statusBar" height="140"></canvas>
+                @else
+                    <p class="text-muted mb-0">No data.</p>
+                @endif
+            </div>
         </div>
     </div>
-    <div class="col-md-6">
+    <div class="col-md-5">
         <div class="card h-100">
             <div class="card-header bg-white fw-semibold">Projects by Type</div>
-            <ul class="list-group list-group-flush">
-                @forelse($byType as $type => $count)
-                    <li class="list-group-item d-flex justify-content-between">{{ ucfirst($type) }}<span class="badge bg-primary rounded-pill">{{ $count }}</span></li>
-                @empty
-                    <li class="list-group-item text-muted">No data.</li>
-                @endforelse
-            </ul>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                @if($byType->isNotEmpty())
+                    <canvas id="typePie" height="180"></canvas>
+                @else
+                    <p class="text-muted mb-0">No data.</p>
+                @endif
+            </div>
         </div>
     </div>
 </div>
@@ -69,3 +77,45 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const statusBar = document.getElementById('statusBar');
+    if (statusBar) {
+        new Chart(statusBar, {
+            type: 'bar',
+            data: {
+                labels: @json($byStatus->keys()),
+                datasets: [{
+                    label: 'Projects',
+                    data: @json($byStatus->values()),
+                    backgroundColor: '#2563eb',
+                    borderRadius: 6,
+                    maxBarThickness: 48,
+                }],
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+            },
+        });
+    }
+
+    const typePie = document.getElementById('typePie');
+    if (typePie) {
+        new Chart(typePie, {
+            type: 'pie',
+            data: {
+                labels: @json($byType->keys()->map(fn ($t) => ucfirst($t))),
+                datasets: [{
+                    data: @json($byType->values()),
+                    backgroundColor: ['#2563eb', '#059669', '#d97706', '#0ea5e9'],
+                    borderWidth: 0,
+                }],
+            },
+            options: { plugins: { legend: { position: 'bottom' } } },
+        });
+    }
+</script>
+@endpush

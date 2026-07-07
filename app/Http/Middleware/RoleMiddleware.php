@@ -21,7 +21,10 @@ class RoleMiddleware
         }
 
         if (! in_array($user->role, $roles, true)) {
-            abort(403, 'You are not authorized to access this page.');
+            // Send the user to their own dashboard instead of dead-ending on a 403.
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'You are not authorized to access that page.');
         }
 
         return $next($request);

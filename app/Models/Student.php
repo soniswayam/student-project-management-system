@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Student extends Model
@@ -12,6 +13,7 @@ class Student extends Model
         'user_id',
         'department_id',
         'roll_no',
+        'semester',
         'phone',
     ];
 
@@ -46,5 +48,11 @@ class Student extends Model
     public function hasProject(): bool
     {
         return $this->membership()->exists();
+    }
+
+    /** This student's assignment submissions. */
+    public function assignmentSubmissions(): HasMany
+    {
+        return $this->hasMany(AssignmentSubmission::class);
     }
 }

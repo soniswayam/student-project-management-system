@@ -1,8 +1,12 @@
 @extends('layouts.app')
-@section('title', 'Admin Dashboard')
+@php $isSuper = auth()->user()->isSuperAdmin(); @endphp
+@section('title', $isSuper ? 'Super Admin Dashboard' : 'Admin Dashboard')
 
 @section('content')
-<h3 class="mb-4">Admin Dashboard</h3>
+<h3 class="mb-4">
+    <i class="bi {{ $isSuper ? 'bi-shield-lock' : 'bi-speedometer2' }} me-2"></i>
+    {{ $isSuper ? 'Super Admin' : 'Admin' }} Dashboard
+</h3>
 
 <div class="row g-3 mb-4">
     @foreach([
@@ -10,16 +14,16 @@
         ['Faculty', $stats['faculties'], 'person-badge', 'success', route('admin.faculties.index')],
         ['Departments', $stats['departments'], 'building', 'warning', route('admin.departments.index')],
         ['Projects', $stats['projects'], 'folder', 'info', route('admin.projects.index')],
-    ] as [$label, $value, $icon, $color, $url])
-        <div class="col-md-3">
+    ] as [$label, $value, $icon, $tone, $url])
+        <div class="col-6 col-md-3">
             <a href="{{ $url }}" class="text-decoration-none">
-                <div class="card stat-card bg-{{ $color }} text-white">
-                    <div class="card-body d-flex justify-content-between align-items-center">
+                <div class="card stat-tile h-100">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="stat-ico tone-{{ $tone }}"><i class="bi bi-{{ $icon }}"></i></span>
                         <div>
-                            <div class="display-6">{{ $value }}</div>
-                            <div>{{ $label }}</div>
+                            <div class="stat-num">{{ $value }}</div>
+                            <div class="stat-label">{{ $label }}</div>
                         </div>
-                        <i class="bi bi-{{ $icon }} fs-1 opacity-50"></i>
                     </div>
                 </div>
             </a>
@@ -31,6 +35,11 @@
     <div class="col-md-5">
         <div class="card h-100">
             <div class="card-header bg-white fw-semibold">Projects by Status</div>
+            @if($statusCounts->isNotEmpty())
+                <div class="card-body pb-0">
+                    <canvas id="statusChart" height="200"></canvas>
+                </div>
+            @endif
             <ul class="list-group list-group-flush">
                 @forelse($statusCounts as $status => $count)
                     <li class="list-group-item d-flex justify-content-between">
@@ -77,3 +86,27 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const statusEl = document.getElementById('statusChart');
+    if (statusEl) {
+        new Chart(statusEl, {
+            type: 'doughnut',
+            data: {
+                labels: @json($statusCounts->keys()),
+                datasets: [{
+                    data: @json($statusCounts->values()),
+                    backgroundColor: ['#64748b', '#0ea5e9', '#2563eb', '#d97706', '#059669', '#7c3aed', '#0d9488'],
+                    borderWidth: 0,
+                }],
+            },
+            options: {
+                plugins: { legend: { position: 'bottom' } },
+                cutout: '60%',
+            },
+        });
+    }
+</script>
+@endpush

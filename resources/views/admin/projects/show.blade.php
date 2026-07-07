@@ -3,9 +3,24 @@
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="mb-0">Project Details</h3>
-    <a href="{{ route('admin.projects.index') }}" class="btn btn-outline-secondary btn-sm">← Back to Projects</a>
+    <h3 class="mb-0"><i class="bi bi-folder2-open me-2"></i>Project Details</h3>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ route('admin.projects.synopsis', $project) }}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-file-earmark-text"></i> Synopsis PDF
+        </a>
+        <a href="{{ route('admin.projects.pdf', $project) }}" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-file-earmark-pdf"></i> Report PDF
+        </a>
+        @if($project->isSubmitted())
+            <a href="{{ route('admin.projects.certificate', $project) }}" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-award"></i> Certificate
+            </a>
+        @endif
+        <a href="{{ route('admin.projects.index') }}" class="btn btn-outline-secondary btn-sm">← Back</a>
+    </div>
 </div>
+
+@include('partials.progress_tracker')
 
 <div class="row">
     <div class="col-lg-7">
@@ -17,6 +32,7 @@
     </div>
 
     <div class="col-lg-5">
+        @can('projects.assign')
         <div class="card mb-3">
             <div class="card-header bg-white fw-semibold"><i class="bi bi-person-check me-1"></i> Assign Faculty</div>
             <div class="card-body">
@@ -40,11 +56,12 @@
                         </select>
                     </div>
                     <button class="btn btn-primary w-100">
-                        {{ $project->assignment ? 'Reassign' : 'Assign' }} Faculty
+                        <i class="bi bi-person-check me-1"></i>{{ $project->assignment ? 'Reassign' : 'Assign' }} Faculty
                     </button>
                 </form>
             </div>
         </div>
+        @endcan
     </div>
 </div>
 @endsection
