@@ -6,6 +6,7 @@
         'active' => ['label' => 'Active', 'class' => 'bg-success'],
         'pending' => ['label' => 'Pending', 'class' => 'bg-warning text-dark'],
         'blocked' => ['label' => 'Blocked', 'class' => 'bg-danger'],
+        'graduated' => ['label' => 'Alumni', 'class' => 'bg-primary'],
     ];
 @endphp
 
@@ -21,6 +22,26 @@
                         class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ $pendingCount }}</span>
                 @endif
             </a>
+
+            @can('students.edit')
+                @if(($overSemesterCount ?? 0) > 0)
+                    <a href="{{ route('admin.students.semester-review') }}"
+                        class="btn btn-outline-danger position-relative"
+                        title="Students past their course's final semester">
+                        <i class="bi bi-exclamation-triangle"></i> Semester Review
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ $overSemesterCount }}</span>
+                    </a>
+                @endif
+            @endcan
+            @can('alumni.view')
+                <a href="{{ route('admin.alumni.index') }}" class="btn btn-outline-primary position-relative"
+                    title="Students who have finished their course">
+                    <i class="bi bi-mortarboard"></i> Alumni
+                    @if(($alumniCount ?? 0) > 0)
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary">{{ $alumniCount }}</span>
+                    @endif
+                </a>
+            @endcan
             <a href="{{ route('admin.students.export') }}" class="btn btn-success"><i class="bi bi-file-earmark-excel"></i>
                 Export</a>
             @can('students.create')
@@ -56,7 +77,15 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label small text-muted mb-1">Semester</label>
+                <label class="form-label small text-muted mb-1">Level</label>
+                <select name="level" class="form-select">
+                    <option value="">All levels</option>
+                    <option value="graduation" @selected(request('level') === 'graduation')>Graduation</option>
+                    <option value="post_graduation" @selected(request('level') === 'post_graduation')>Post-Graduation</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label small text-muted mb-1">Sem</label>
                 <select name="semester" class="form-select">
                     <option value="">All</option>
                     @foreach($semesters as $sem)
@@ -73,7 +102,7 @@
                     @endforeach
                 </select>
             </div>
-            @if(request()->hasAny(['search', 'department_id', 'semester', 'status']))
+            @if(request()->hasAny(['search', 'department_id', 'level', 'semester', 'status']))
                 <div class="col-md-1 d-grid">
                     <a href="{{ route('admin.students.index') }}" class="btn btn-outline-secondary"
                         title="Clear filters" aria-label="Clear filters">Clear</a>
@@ -83,24 +112,43 @@
     </form>
 
     @can('students.edit')
-        {{-- Bulk promote bar: appears when one or more students are selected. --}}
+
         <div id="bulkBar" class="card card-body mb-2 d-none flex-row align-items-center flex-wrap gap-2 border-primary no-print">
             <span class="fw-semibold text-primary"><span id="selCount">0</span> selected</span>
             <span id="semFlow" class="small text-muted"></span>
-            <div class="ms-auto d-flex gap-2">
+            <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
                 <button type="button" id="bulkPromoteBtn" class="btn btn-primary btn-sm">
-                    <i class="bi bi-arrow-up-circle"></i> Promote selected to next semester
+                    <i class="bi bi-arrow-up-circle"></i> Promote to next semester
                 </button>
+                @can('alumni.manage')
+
+                    <button type="button" id="bulkAlumniBtn" class="btn btn-success btn-sm"
+                            data-batch-id="{{ $currentYear?->id }}"
+                            data-batch-label="{{ $currentYear?->label }}">
+                        <i class="bi bi-mortarboard"></i>
+                        Move to Alumni
+                        @if($currentYear)
+                            <span class="opacity-75">· batch {{ $currentYear->label }}</span>
+                        @endif
+                    </button>
+                @endcan
                 <button type="button" id="clearSelBtn" class="btn btn-outline-secondary btn-sm">Clear</button>
             </div>
         </div>
 
-        {{-- Hidden form that carries the chosen student IDs to the promote route. --}}
         <form id="promoteForm" method="POST" action="{{ route('admin.students.promote-semester') }}" class="d-none">
             @csrf
             @method('PATCH')
             <div id="promoteIds"></div>
         </form>
+
+        @can('alumni.manage')
+            <form id="alumniForm" method="POST" action="{{ route('admin.alumni.store') }}" class="d-none">
+                @csrf
+                <input type="hidden" name="passed_out_year_id" id="alumniYearField">
+                <div id="alumniIds"></div>
+            </form>
+        @endcan
     @endcan
 
     <div class="card">
@@ -126,21 +174,37 @@
                     @forelse($students as $student)
                         @php $status = $student->user->status ?? 'active';
                         $meta = $statusMeta[$status] ?? $statusMeta['active'];
-                        $totalSem = $student->department?->total_semesters;
+                        $totalSem = $student->department?->finalSemester();
                         $isFinal = $totalSem !== null && (int) $student->semester >= $totalSem; @endphp
                         <tr>
                             @can('students.edit')
                                 <td>
+
                                     <input class="form-check-input row-check" type="checkbox" value="{{ $student->id }}"
-                                        data-sem="{{ (int) $student->semester }}" @disabled($isFinal)
-                                        title="{{ $isFinal ? 'Already in final semester' : 'Select' }}">
+                                        data-sem="{{ (int) $student->semester }}"
+                                        data-final="{{ $isFinal ? '1' : '0' }}"
+                                        data-project="{{ $student->hasCompletedProject() ? '1' : '0' }}"
+                                        title="Select">
                                 </td>
                             @endcan
                             <td><span class="badge bg-secondary">{{ $student->roll_no }}</span></td>
                             <td>{{ $student->user->name }}</td>
                             <td>{{ $student->user->email }}</td>
-                            <td>{{ $student->department?->name ?? '—' }}</td>
-                            <td>{{ $student->semester ?? '—' }}</td>
+                            <td>
+                                {{ $student->department?->name ?? '—' }}
+                                @if($student->department)
+                                    <span class="badge bg-{{ $student->department->levelColor() }} ms-1"
+                                          title="{{ $student->department->levelLabel() }}">
+                                        {{ $student->department->levelShort() }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td>
+                                {{ $student->semester ?? '—' }}
+                                @if($isFinal)
+                                    <span class="badge bg-light text-dark border ms-1" title="Final semester of this course">final</span>
+                                @endif
+                            </td>
                             <td>{{ $student->phone ?? '—' }}</td>
                             <td><span class="badge {{ $meta['class'] }}">{{ $meta['label'] }}</span></td>
                             <td class="text-nowrap small text-muted">{{ $student->created_at?->format('d M Y') }}</td>
@@ -215,7 +279,7 @@
 <script>
 (function () {
     const form = document.getElementById('promoteForm');
-    if (!form) return; // user lacks students.edit — no promote UI
+    if (!form) return;
 
     const idsBox    = document.getElementById('promoteIds');
     const bar       = document.getElementById('bulkBar');
@@ -223,19 +287,22 @@
     const semFlow   = document.getElementById('semFlow');
     const selectAll = document.getElementById('selectAll');
 
-    // Only non-final (enabled) checkboxes are selectable.
     const boxes  = () => Array.from(document.querySelectorAll('.row-check')).filter(c => !c.disabled);
     const chosen = () => boxes().filter(c => c.checked);
 
-    function submitIds(ids) {
-        idsBox.innerHTML = '';
+    function fillIds(container, ids) {
+        container.innerHTML = '';
         ids.forEach(function (id) {
             const input = document.createElement('input');
             input.type = 'hidden';
             input.name = 'student_ids[]';
             input.value = id;
-            idsBox.appendChild(input);
+            container.appendChild(input);
         });
+    }
+
+    function submitIds(ids) {
+        fillIds(idsBox, ids);
         form.submit();
     }
 
@@ -244,14 +311,21 @@
         selCount.textContent = sel.length;
         bar.classList.toggle('d-none', sel.length === 0);
 
-        // Semester-wise: show the transition when the selection shares one semester.
         const sems = [...new Set(sel.map(c => c.dataset.sem))].sort((a, b) => a - b);
+        const finalCount = sel.filter(c => c.dataset.final === '1').length;
+
         if (sel.length === 0) {
             semFlow.textContent = '';
+        } else if (finalCount === sel.length) {
+            semFlow.innerHTML = '· <strong>all in their final semester</strong> — ready for Alumni';
         } else if (sems.length === 1) {
             semFlow.innerHTML = '· <strong>Semester ' + sems[0] + ' → Semester ' + (Number(sems[0]) + 1) + '</strong>';
         } else {
             semFlow.innerHTML = '· ' + sems.length + ' semesters (each moves +1)';
+        }
+
+        if (finalCount > 0 && finalCount < sel.length) {
+            semFlow.innerHTML += ' · <span class="text-warning-emphasis">' + finalCount + ' already final</span>';
         }
 
         if (selectAll) {
@@ -276,6 +350,38 @@
             submitIds(ids);
         }
     });
+
+    const alumniForm = document.getElementById('alumniForm');
+    const alumniBtn  = document.getElementById('bulkAlumniBtn');
+
+    if (alumniForm && alumniBtn) {
+        alumniBtn.addEventListener('click', function () {
+            const sel = chosen();
+            if (!sel.length) return;
+
+            const batchId = alumniBtn.dataset.batchId;
+            const batchName = alumniBtn.dataset.batchLabel;
+
+            if (!batchId) {
+                alert('Set a current academic year first — an alumnus needs a batch to be filed under.');
+                return;
+            }
+
+            const notFinal  = sel.filter(c => c.dataset.final !== '1').length;
+            const noProject = sel.filter(c => c.dataset.project !== '1').length;
+
+            let msg = 'Move ' + sel.length + ' student(s) to Alumni under batch ' + batchName + '?';
+            if (notFinal)  msg += '\n\n⚠ ' + notFinal + ' have not reached their final semester.';
+            if (noProject) msg += '\n⚠ ' + noProject + ' have no completed project.';
+            msg += '\n\nThey keep read-only access and can be restored later.';
+
+            if (!confirm(msg)) return;
+
+            document.getElementById('alumniYearField').value = batchId;
+            fillIds(document.getElementById('alumniIds'), sel.map(c => c.value));
+            alumniForm.submit();
+        });
+    }
 
     document.getElementById('clearSelBtn').addEventListener('click', function () {
         boxes().forEach(c => { c.checked = false; });

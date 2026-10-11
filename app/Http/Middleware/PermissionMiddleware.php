@@ -8,10 +8,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class PermissionMiddleware
 {
-    /**
-     * Allow the request only if the user holds every listed permission.
-     * Usage: ->middleware('perm:students.delete')
-     */
     public function handle(Request $request, Closure $next, string ...$keys): Response
     {
         $user = $request->user();

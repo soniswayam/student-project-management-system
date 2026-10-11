@@ -1,14 +1,10 @@
-{{--
-    Reusable password input with a show/hide eye toggle.
-    Params: name (required), id, label, autocomplete, required (bool), optional (bool)
-    The toggle is wired by the global [data-password-toggle] script in layouts.app.
---}}
 @php
     $id = $id ?? $name;
     $label = $label ?? 'Password';
     $autocomplete = $autocomplete ?? 'current-password';
     $required = $required ?? true;
     $optional = $optional ?? false;
+    $hint = $hint ?? false;
 @endphp
 <label class="form-label" for="{{ $id }}">
     {{ $label }}
@@ -24,3 +20,6 @@
     </button>
     @error($name) <div class="invalid-feedback">{{ $message }}</div> @enderror
 </div>
+@if($hint)
+    <div class="form-text">{{ \App\Support\PasswordRules::hint() }}</div>
+@endif

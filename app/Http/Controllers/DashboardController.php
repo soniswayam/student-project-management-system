@@ -6,7 +6,6 @@ use Illuminate\Http\RedirectResponse;
 
 class DashboardController extends Controller
 {
-    /** Route the logged-in user to the right dashboard for their role. */
     public function index(): RedirectResponse
     {
         $user = auth()->user();

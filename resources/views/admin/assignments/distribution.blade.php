@@ -12,7 +12,6 @@
     </div>
 </div>
 
-{{-- Summary strip --}}
 <div class="row g-2 mb-3 no-print">
     @foreach([
         ['Faculty', $totals['faculty'], 'bi-person-badge'],
@@ -41,7 +40,6 @@
     </div>
 </form>
 
-{{-- ============ SCREEN: grouped by Faculty › Subject ============ --}}
 <div class="no-print">
     @forelse($byFaculty as $facultyName => $assignments)
         <div class="card mb-3">
@@ -51,7 +49,7 @@
                     <div class="fw-semibold text-primary mb-2"><i class="bi bi-book me-1"></i>{{ $subject ?: '—' }}</div>
 
                     @foreach($subjectAssignments as $a)
-                        @php $total = $studentCounts[$a->department_id] ?? 0; @endphp
+                        @php $total = $studentCounts[$a->id] ?? 0; @endphp
                         <div class="border rounded mb-3">
                             <div class="d-flex flex-wrap justify-content-between align-items-center bg-light px-3 py-2">
                                 <div>
@@ -103,7 +101,6 @@
     @endforelse
 </div>
 
-{{-- ============ PRINT ONLY: simple flat table, no signatures ============ --}}
 <div class="print-only">
     <div class="print-title mb-2 text-center">
         <h4 class="mb-0">{{ config('college.name') }}</h4>

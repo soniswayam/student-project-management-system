@@ -29,7 +29,7 @@
 </ul>
 
 <div class="tab-content">
-    {{-- Staff --}}
+
     @if($canStaff)
         <div class="tab-pane fade {{ $activeTab === 'staff' ? 'show active' : '' }}" id="staff-pane" role="tabpanel" aria-labelledby="staff-tab">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -40,7 +40,6 @@
         </div>
     @endif
 
-    {{-- Roles --}}
     @if($canRoles)
         <div class="tab-pane fade {{ $activeTab === 'roles' ? 'show active' : '' }}" id="roles-pane" role="tabpanel" aria-labelledby="roles-tab">
             <div class="d-flex justify-content-between align-items-center mb-3">

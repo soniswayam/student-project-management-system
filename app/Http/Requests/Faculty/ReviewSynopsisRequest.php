@@ -6,7 +6,6 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class ReviewSynopsisRequest extends FormRequest
 {
-    /** Faculty ownership of the project is enforced in the controller. */
     public function authorize(): bool
     {
         return $this->user()?->role === 'faculty';

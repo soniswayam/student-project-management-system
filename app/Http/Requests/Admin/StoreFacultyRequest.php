@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Support\PasswordRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Password;
 
 class StoreFacultyRequest extends FormRequest
 {
@@ -29,7 +29,7 @@ class StoreFacultyRequest extends FormRequest
             'department_ids.*' => ['integer', 'exists:departments,id'],
             'designation' => ['nullable', 'string', 'max:100'],
             'phone' => ['nullable', 'string', 'max:20'],
-            'password' => ['required', 'confirmed', Password::min(6)],
+            'password' => ['required', 'confirmed', PasswordRules::password()],
         ];
     }
 }

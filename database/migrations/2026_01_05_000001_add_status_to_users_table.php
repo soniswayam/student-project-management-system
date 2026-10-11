@@ -6,12 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Add an account status to users so admins can approve, block or
-     * deactivate accounts. Existing rows default to "active" so nothing
-     * that already works is disrupted; self-registered students are set
-     * to "pending" by the registration flow.
-     */
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {

@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
+use function Illuminate\Support\defer;
+
 class Notification extends Model
 {
     protected $fillable = [
@@ -27,10 +29,6 @@ class Notification extends Model
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Create an in-app notification for a user and email them a copy.
-     * Email delivery failures are logged but never break the workflow.
-     */
     public static function notify(int $userId, string $title, string $message, ?string $link = null): void
     {
         static::create([
@@ -40,10 +38,9 @@ class Notification extends Model
             'link' => $link,
         ]);
 
-        static::sendEmail($userId, $title, $message, $link);
+        defer(fn () => static::sendEmail($userId, $title, $message, $link));
     }
 
-    /** Deliver the notification as an email (best-effort). */
     protected static function sendEmail(int $userId, string $title, string $message, ?string $link): void
     {
         $user = User::find($userId);
@@ -57,7 +54,6 @@ class Notification extends Model
                 new NotificationMail($title, $message, $link, $user->name)
             );
         } catch (\Throwable $e) {
-            // Do not let a mail transport problem interrupt the app flow.
             Log::warning('Notification email failed: '.$e->getMessage());
         }
     }

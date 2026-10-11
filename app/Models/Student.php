@@ -15,6 +15,12 @@ class Student extends Model
         'roll_no',
         'semester',
         'phone',
+        'passed_out_year_id',
+        'passed_out_at',
+    ];
+
+    protected $casts = [
+        'passed_out_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -27,19 +33,38 @@ class Student extends Model
         return $this->belongsTo(Department::class);
     }
 
-    /** The membership row linking this student to a project (if any). */
+    public function passedOutYear(): BelongsTo
+    {
+        return $this->belongsTo(AcademicYear::class, 'passed_out_year_id');
+    }
+
+    public function isAlumni(): bool
+    {
+        return (bool) $this->user?->isGraduated();
+    }
+
+    public function batchLabel(): ?string
+    {
+        return $this->passedOutYear?->label;
+    }
+
+    public function hasCompletedProject(): bool
+    {
+        $project = $this->membership?->project ?? $this->ledProject;
+
+        return $project !== null && $project->status === Project::STATUS_COMPLETED;
+    }
+
     public function membership(): HasOne
     {
         return $this->hasOne(ProjectMember::class);
     }
 
-    /** The project this student leads (if any). */
     public function ledProject(): HasOne
     {
         return $this->hasOne(Project::class, 'leader_student_id');
     }
 
-    /** Resolve the project this student belongs to, whether leader or partner. */
     public function project(): ?Project
     {
         return $this->membership?->project;
@@ -50,9 +75,26 @@ class Student extends Model
         return $this->membership()->exists();
     }
 
-    /** This student's assignment submissions. */
     public function assignmentSubmissions(): HasMany
     {
         return $this->hasMany(AssignmentSubmission::class);
+    }
+
+    public static function availablePartnersFor(self $student, ?Project $currentProject = null)
+    {
+        return self::with('user')
+            ->where('id', '!=', $student->id)
+            ->where('department_id', $student->department_id)
+            ->where('semester', $student->semester)
+            ->whereHas('user', fn ($u) => $u->where('status', User::STATUS_ACTIVE))
+            ->where(function ($q) use ($currentProject) {
+                $q->whereDoesntHave('membership');
+
+                if ($currentProject) {
+                    $q->orWhereHas('membership', fn ($m) => $m->where('project_id', $currentProject->id));
+                }
+            })
+            ->orderBy('roll_no')
+            ->get();
     }
 }

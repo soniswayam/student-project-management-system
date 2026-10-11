@@ -26,6 +26,7 @@
                             'name' => 'password',
                             'label' => 'New Password',
                             'autocomplete' => 'new-password',
+                            'hint' => true,
                         ])
                     </div>
                     <div class="mb-3">

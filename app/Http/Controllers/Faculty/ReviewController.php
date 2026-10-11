@@ -12,10 +12,19 @@ use Illuminate\Http\RedirectResponse;
 
 class ReviewController extends Controller
 {
-    /** Review a synopsis: approve / reject / request correction. */
     public function reviewSynopsis(ReviewSynopsisRequest $request, Project $project): RedirectResponse
     {
         $faculty = $this->authorizeProject($project);
+
+        $reviewable = [
+            Project::STATUS_SYNOPSIS_PENDING,
+            Project::STATUS_SYNOPSIS_REVIEW,
+            Project::STATUS_CORRECTION,
+        ];
+
+        if (! in_array($project->status, $reviewable, true)) {
+            return back()->with('error', 'This synopsis is not waiting for review.');
+        }
 
         $data = $request->validated();
 
@@ -43,12 +52,10 @@ class ReviewController extends Controller
         return back()->with('success', 'Synopsis review submitted.');
     }
 
-    /** Review the final submission and award marks. */
     public function reviewFinal(ReviewFinalRequest $request, Project $project): RedirectResponse
     {
         $faculty = $this->authorizeProject($project);
 
-        // A final review is only valid once the student has actually submitted final files.
         if (! in_array($project->status, [Project::STATUS_FINAL_SUBMITTED, Project::STATUS_FINAL_REVIEWED], true)) {
             return back()->with('error', 'The student has not submitted the final project yet.');
         }
@@ -72,7 +79,8 @@ class ReviewController extends Controller
                 : Project::STATUS_FINAL_REVIEWED,
         ]);
 
-        $marksNote = isset($data['marks']) ? " Marks: {$data['marks']}/100." : '';
+        $fresh = $project->fresh();
+        $marksNote = ($fresh->isCompleted() && ($label = $fresh->marksLabel())) ? " Marks: {$label}." : '';
         $this->notifyMembers(
             $project,
             'Final project reviewed',
@@ -82,18 +90,17 @@ class ReviewController extends Controller
         return back()->with('success', 'Final review submitted.');
     }
 
-    /** Ensure the project is assigned to the current faculty; return the Faculty model. */
     private function authorizeProject(Project $project)
     {
         $faculty = auth()->user()->faculty;
         $owns = $faculty && $project->assignment && $project->assignment->faculty_id === $faculty->id;
 
         abort_unless($owns, 403, 'This project is not assigned to you.');
+        abort_if($project->isArchived(), 403, 'This project belongs to an archived academic year and is read-only.');
 
         return $faculty;
     }
 
-    /** Send a notification to every member of the project. */
     private function notifyMembers(Project $project, string $title, string $message): void
     {
         $project->loadMissing('members.student.user');

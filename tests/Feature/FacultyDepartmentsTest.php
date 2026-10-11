@@ -39,7 +39,6 @@ class FacultyDepartmentsTest extends TestCase
             [$bca->id, $mscit->id, $mscca->id],
             $faculty->departments()->pluck('departments.id')->all()
         );
-        // First selected department becomes the primary/home department.
         $this->assertSame($bca->id, $faculty->department_id);
     }
 
@@ -53,7 +52,6 @@ class FacultyDepartmentsTest extends TestCase
         $faculty = Faculty::create(['user_id' => $facUser->id, 'department_id' => $bca->id]);
         $faculty->departments()->sync([$bca->id]);
 
-        // Re-assign to only MSc IT.
         $this->actingAs($super)->put(route('admin.faculties.update', $faculty), [
             'name' => 'P',
             'email' => 'p@t.com',
@@ -71,15 +69,13 @@ class FacultyDepartmentsTest extends TestCase
 
         $facUser = User::create(['name' => 'P', 'email' => 'p@t.com', 'password' => 'password', 'role' => 'faculty']);
         $faculty = Faculty::create(['user_id' => $facUser->id, 'department_id' => $bca->id]);
-        $faculty->departments()->sync([$bca->id]); // teaches BCA only
+        $faculty->departments()->sync([$bca->id]);
 
-        // Posting to a department they do NOT teach is rejected.
         $this->actingAs($facUser)->post(route('faculty.assignments.store'), [
             'title' => 'A1', 'department_id' => $mscit->id, 'subject' => 'Java', 'type' => 'Theory',
         ])->assertSessionHasErrors('department_id');
         $this->assertDatabaseCount('assignments', 0);
 
-        // Posting to their own department succeeds.
         $this->actingAs($facUser)->post(route('faculty.assignments.store'), [
             'title' => 'A1', 'department_id' => $bca->id, 'subject' => 'Java', 'type' => 'Theory',
         ])->assertRedirect(route('faculty.assignments.index'));

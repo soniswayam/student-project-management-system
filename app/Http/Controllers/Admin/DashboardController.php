@@ -7,6 +7,7 @@ use App\Models\Department;
 use App\Models\Faculty;
 use App\Models\Project;
 use App\Models\Student;
+use App\Models\User;
 
 class DashboardController extends Controller
 {
@@ -25,11 +26,40 @@ class DashboardController extends Controller
 
         $unassigned = Project::doesntHave('assignment')->count();
 
-        $recentProjects = Project::with('leader.user', 'assignment.faculty.user')
+        $pendingCount = User::pendingCount();
+
+        $recentProjects = Project::with('members.student.user', 'assignment.faculty.user')
             ->latest()
             ->take(5)
             ->get();
 
-        return view('admin.dashboard', compact('stats', 'statusCounts', 'unassigned', 'recentProjects'));
+        $levelStats = $this->levelStats();
+
+        return view('admin.dashboard', compact('stats', 'statusCounts', 'unassigned', 'pendingCount', 'recentProjects', 'levelStats'));
+    }
+
+    private function levelStats(): array
+    {
+        $students = Student::query()
+            ->join('departments', 'students.department_id', '=', 'departments.id')
+            ->selectRaw('departments.level, COUNT(*) as total')
+            ->groupBy('departments.level')
+            ->pluck('total', 'level');
+
+        $projects = Project::query()
+            ->join('departments', 'projects.department_id', '=', 'departments.id')
+            ->selectRaw('departments.level, COUNT(*) as total')
+            ->groupBy('departments.level')
+            ->pluck('total', 'level');
+
+        return collect(Department::LEVELS)->map(fn (string $level) => [
+            'level' => $level,
+            'label' => $level === Department::LEVEL_POST_GRADUATION ? 'Post-Graduation' : 'Graduation',
+            'short' => $level === Department::LEVEL_POST_GRADUATION ? 'PG' : 'UG',
+            'color' => $level === Department::LEVEL_POST_GRADUATION ? 'primary' : 'info',
+            'students' => (int) ($students[$level] ?? 0),
+            'projects' => (int) ($projects[$level] ?? 0),
+            'courses' => Department::where('level', $level)->count(),
+        ])->all();
     }
 }

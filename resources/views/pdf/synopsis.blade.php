@@ -57,12 +57,11 @@
 
     <div class="h">Team Members</div>
     <table class="info">
-        <tr><th style="width:34%">Name</th><th style="width:33%">Roll No</th><th style="width:33%">Role</th></tr>
+        <tr><th style="width:50%">Name</th><th style="width:50%">Roll No</th></tr>
         @foreach($project->members as $m)
             <tr>
                 <td>{{ $m->student?->user?->name ?? '—' }}</td>
                 <td>{{ $m->student?->roll_no ?? '—' }}</td>
-                <td>{{ ucfirst($m->role_in_project) }}</td>
             </tr>
         @endforeach
     </table>

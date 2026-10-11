@@ -45,13 +45,11 @@ class RoleAccessTest extends TestCase
         $admin = $this->user('admin');
         $dashboard = route('dashboard');
 
-        // Admin lacks: admins.manage, roles.manage, settings.manage, faculty.manage.
         $this->actingAs($admin)->get(route('admin.admins.index'))->assertRedirect($dashboard);
         $this->actingAs($admin)->get(route('admin.roles.index'))->assertRedirect($dashboard);
         $this->actingAs($admin)->get(route('admin.settings.edit'))->assertRedirect($dashboard);
         $this->actingAs($admin)->get(route('admin.faculties.create'))->assertRedirect($dashboard);
 
-        // Admin lacks departments.manage.
         $this->actingAs($admin)->post(route('admin.departments.store'), ['name' => 'X', 'code' => 'X'])
             ->assertRedirect($dashboard);
         $this->assertDatabaseMissing('departments', ['code' => 'X']);
@@ -78,8 +76,11 @@ class RoleAccessTest extends TestCase
         $this->actingAs($super)->get(route('admin.settings.edit'))->assertOk();
         $this->actingAs($super)->get(route('admin.admins.index'))->assertOk();
 
-        $this->actingAs($super)->post(route('admin.departments.store'), ['name' => 'MSC', 'code' => 'MSC']);
-        $this->assertDatabaseHas('departments', ['code' => 'MSC']);
+        $this->actingAs($super)->post(route('admin.departments.store'), [
+            'name' => 'MSC', 'code' => 'MSC',
+            'level' => 'post_graduation', 'duration_years' => 2,
+        ]);
+        $this->assertDatabaseHas('departments', ['code' => 'MSC', 'total_semesters' => 4]);
     }
 
     public function test_access_control_page_combines_staff_and_roles(): void
@@ -92,13 +93,11 @@ class RoleAccessTest extends TestCase
         $res->assertSee('Staff');
         $res->assertSee('Roles');
 
-        // A plain admin holds neither admins.manage nor roles.manage → forbidden.
         $this->actingAs($this->user('admin'))->get(route('admin.access.index'))->assertForbidden();
     }
 
     public function test_custom_role_sees_only_its_permitted_pages(): void
     {
-        // A "Coordinator" role that can only view students.
         Role::create([
             'name' => 'coordinator',
             'label' => 'Coordinator',
@@ -108,10 +107,8 @@ class RoleAccessTest extends TestCase
         ]);
         $coordinator = $this->user('coordinator');
 
-        // Allowed.
         $this->actingAs($coordinator)->get(route('admin.students.index'))->assertOk();
 
-        // Not allowed — no projects.view, no students.create.
         $this->actingAs($coordinator)->get(route('admin.projects.index'))->assertRedirect(route('dashboard'));
         $this->actingAs($coordinator)->get(route('admin.students.create'))->assertRedirect(route('dashboard'));
     }

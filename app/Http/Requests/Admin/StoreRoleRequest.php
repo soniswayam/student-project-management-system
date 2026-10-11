@@ -21,4 +21,19 @@ class StoreRoleRequest extends FormRequest
             'permissions.*' => [Rule::in(Role::allKeys())],
         ];
     }
+
+    public function after(): array
+    {
+        return [
+            function ($validator) {
+                $slug = str((string) $this->input('label'))->slug('_')->toString();
+
+                if ($slug === '') {
+                    $validator->errors()->add('label', 'Please use letters or numbers in the role name.');
+                } elseif (Role::where('name', $slug)->exists()) {
+                    $validator->errors()->add('label', 'A role with this name already exists.');
+                }
+            },
+        ];
+    }
 }

@@ -8,6 +8,9 @@
         @can('students.view')
             <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.students.*') ? 'active' : '' }}" href="{{ route('admin.students.index') }}"><i class="bi bi-people me-2"></i>Students</a></li>
         @endcan
+        @can('alumni.view')
+            <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.alumni.*') ? 'active' : '' }}" href="{{ route('admin.alumni.index') }}"><i class="bi bi-mortarboard me-2"></i>Alumni</a></li>
+        @endcan
         @can('faculty.view')
             <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.faculties.*') ? 'active' : '' }}" href="{{ route('admin.faculties.index') }}"><i class="bi bi-person-badge me-2"></i>Faculty</a></li>
         @endcan
@@ -20,13 +23,40 @@
         @can('assignments.view')
             <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.assignments.*') ? 'active' : '' }}" href="{{ route('admin.assignments.index') }}"><i class="bi bi-journal-text me-2"></i>Assignments</a></li>
         @endcan
+        @can('archive.view')
+            <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.archive.*') ? 'active' : '' }}" href="{{ route('admin.archive.index') }}"><i class="bi bi-archive me-2"></i>Archive</a></li>
+        @endcan
+
+        @canany(['reports.view', 'similarity.view', 'workload.view'])
+            <li class="nav-section">Insights</li>
+        @endcanany
         @can('reports.view')
             <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}"><i class="bi bi-bar-chart me-2"></i>Reports</a></li>
         @endcan
+        @can('similarity.view')
+            <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.similarity.*') ? 'active' : '' }}" href="{{ route('admin.similarity.index') }}"><i class="bi bi-fingerprint me-2"></i>Plagiarism</a></li>
+        @endcan
+        @can('workload.view')
+            <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.workload.*') ? 'active' : '' }}" href="{{ route('admin.workload.index') }}"><i class="bi bi-speedometer me-2"></i>Faculty Workload</a></li>
+        @endcan
 
-        @canany(['admins.manage', 'roles.manage', 'settings.manage'])
+        @canany(['admins.manage', 'roles.manage', 'settings.manage', 'approvals.manage', 'academic_years.manage'])
             <li class="nav-section">Administration</li>
         @endcanany
+        @can('approvals.manage')
+            @php $pendingApprovals = \App\Models\User::pendingCount(); @endphp
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center {{ request()->routeIs('admin.approvals.*') ? 'active' : '' }}" href="{{ route('admin.approvals.index') }}">
+                    <i class="bi bi-person-check me-2"></i>Approvals
+                    @if($pendingApprovals > 0)
+                        <span class="badge bg-danger rounded-pill ms-auto">{{ $pendingApprovals }}</span>
+                    @endif
+                </a>
+            </li>
+        @endcan
+        @can('academic_years.manage')
+            <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.academic-years.*') ? 'active' : '' }}" href="{{ route('admin.academic-years.index') }}"><i class="bi bi-calendar3 me-2"></i>Academic Years</a></li>
+        @endcan
         @canany(['admins.manage', 'roles.manage'])
             <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.access.*', 'admin.admins.*', 'admin.roles.*') ? 'active' : '' }}" href="{{ route('admin.access.index') }}"><i class="bi bi-shield-lock me-2"></i>Staff &amp; Roles</a></li>
         @endcanany

@@ -13,17 +13,13 @@ return new class extends Migration
             $table->foreignId('assignment_id')->constrained()->cascadeOnDelete();
             $table->foreignId('student_id')->constrained('students')->cascadeOnDelete();
             $table->string('file_path');
-            // Optional note the student adds when submitting.
             $table->text('remarks')->nullable();
             $table->timestamp('submitted_at');
-            // submitted | checked
             $table->string('status')->default('submitted');
-            // Optional feedback the faculty leaves when marking as checked.
             $table->text('feedback')->nullable();
             $table->timestamp('checked_at')->nullable();
             $table->timestamps();
 
-            // One submission per student per assignment (re-upload replaces it).
             $table->unique(['assignment_id', 'student_id']);
         });
     }

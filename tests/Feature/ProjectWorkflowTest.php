@@ -97,13 +97,11 @@ class ProjectWorkflowTest extends TestCase
         $partner = $this->makeStudent('p@test.com', 'R2');
         $leader2 = $this->makeStudent('l2@test.com', 'R3');
 
-        // leader1 + partner form a group
         $this->actingAs($leader1->user)->post(route('student.synopsis.store'), [
             'project_type' => 'group', 'name' => 'P1', 'partner_student_id' => $partner->id,
             'frontend_tech' => 'React', 'backend_tech' => 'Laravel', 'abstract' => str_repeat('idea ', 10),
         ]);
 
-        // leader2 tries to take the already-engaged partner
         $this->actingAs($leader2->user)->post(route('student.synopsis.store'), [
             'project_type' => 'group', 'name' => 'P2', 'partner_student_id' => $partner->id,
             'frontend_tech' => 'React', 'backend_tech' => 'Laravel', 'abstract' => str_repeat('idea ', 10),
@@ -120,7 +118,6 @@ class ProjectWorkflowTest extends TestCase
             'backend_tech' => 'L', 'abstract' => str_repeat('idea ', 10),
         ]);
 
-        // Still under review -> upload form should redirect away with an error.
         $this->actingAs($leader->user)->get(route('student.submission.create'))
             ->assertRedirectContains('project');
     }
@@ -128,29 +125,26 @@ class ProjectWorkflowTest extends TestCase
     public function test_full_flow_assign_review_upload_grade(): void
     {
         Storage::fake('public');
+        Storage::fake('local');
 
         $leader = $this->makeStudent('leader@test.com', 'R1');
         $faculty = $this->makeFaculty('fac@test.com');
         $admin = User::create(['name' => 'A', 'email' => 'a@test.com', 'password' => 'password', 'role' => 'admin']);
 
-        // 1. Submit synopsis
         $this->actingAs($leader->user)->post(route('student.synopsis.store'), [
             'project_type' => 'single', 'name' => 'P', 'frontend_tech' => 'R',
             'backend_tech' => 'L', 'abstract' => str_repeat('idea ', 10),
         ]);
         $project = Project::first();
 
-        // 2. Admin assigns faculty
         $this->actingAs($admin)->post(route('admin.projects.assign', $project), ['faculty_id' => $faculty->id]);
         $this->assertDatabaseHas('faculty_assignments', ['project_id' => $project->id, 'faculty_id' => $faculty->id]);
 
-        // 3. Faculty approves synopsis
         $this->actingAs($faculty->user)->post(route('faculty.projects.reviewSynopsis', $project), [
             'action' => 'approved', 'comments' => 'Good.',
         ]);
         $this->assertEquals(Project::STATUS_SYNOPSIS_APPROVED, $project->fresh()->status);
 
-        // 4. Student uploads final files
         $this->actingAs($leader->user)->post(route('student.submission.store'), [
             'report' => UploadedFile::fake()->create('report.pdf', 100, 'application/pdf'),
             'source_zip' => UploadedFile::fake()->create('src.zip', 200, 'application/zip'),
@@ -159,7 +153,6 @@ class ProjectWorkflowTest extends TestCase
         $this->assertEquals(Project::STATUS_FINAL_SUBMITTED, $project->fresh()->status);
         $this->assertDatabaseHas('project_submissions', ['project_id' => $project->id]);
 
-        // 5. Faculty grades and completes
         $this->actingAs($faculty->user)->post(route('faculty.projects.reviewFinal', $project), [
             'marks' => 90, 'comments' => 'Great', 'final_remarks' => 'Well done', 'complete' => 1,
         ]);
@@ -172,8 +165,6 @@ class ProjectWorkflowTest extends TestCase
     {
         $leader = $this->makeStudent('leader@test.com', 'R1');
 
-        // Cross-role access is redirected back to the user's own dashboard
-        // (with an error flash) instead of dead-ending on a 403 page.
         $this->actingAs($leader->user)->get(route('admin.dashboard'))
             ->assertRedirect(route('dashboard'))
             ->assertSessionHas('error');

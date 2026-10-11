@@ -32,7 +32,7 @@
             </tr>
             <tr>
                 <th>Due Date</th><td>{{ $assignment->due_date?->format('d M Y, H:i') ?? 'No due date' }}</td>
-                <th>Submitted</th><td>{{ $assignment->submissions->count() }} of {{ $assignment->department?->students()->count() ?? 0 }} students</td>
+                <th>Submitted</th><td>{{ $assignment->submissions->count() }} of {{ $studentCounts[$assignment->id] ?? $assignment->targetStudents()->count() }} students</td>
             </tr>
         </table>
 

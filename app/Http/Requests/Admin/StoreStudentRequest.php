@@ -3,9 +3,9 @@
 namespace App\Http\Requests\Admin;
 
 use App\Models\User;
+use App\Support\PasswordRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class StoreStudentRequest extends FormRequest
 {
@@ -23,8 +23,8 @@ class StoreStudentRequest extends FormRequest
             'department_id' => ['required', 'exists:departments,id'],
             'semester' => ['required', 'string', 'max:20'],
             'phone' => ['nullable', 'string', 'max:20'],
-            'status' => ['required', Rule::in(User::STATUSES)],
-            'password' => ['required', 'confirmed', Password::min(6)],
+            'status' => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_PENDING, User::STATUS_BLOCKED])],
+            'password' => ['required', 'confirmed', PasswordRules::password()],
         ];
     }
 }

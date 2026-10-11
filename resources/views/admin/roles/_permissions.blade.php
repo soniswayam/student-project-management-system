@@ -1,4 +1,3 @@
-{{-- Permission checkbox grid. Expects: $catalog (grouped), $selected (array of keys) --}}
 <div class="row g-3">
     @foreach($catalog as $group => $permissions)
         <div class="col-md-6">

@@ -3,110 +3,174 @@
 @section('title', $isSuper ? 'Super Admin Dashboard' : 'Admin Dashboard')
 
 @section('content')
-<h3 class="mb-4">
-    <i class="bi {{ $isSuper ? 'bi-shield-lock' : 'bi-speedometer2' }} me-2"></i>
-    {{ $isSuper ? 'Super Admin' : 'Admin' }} Dashboard
-</h3>
+@php
+    $h = (int) now()->format('H');
+    $greet = $h < 12 ? 'Good morning' : ($h < 17 ? 'Good afternoon' : 'Good evening');
+    $canApprovals = auth()->user()->can('approvals.manage');
+    $canProjects = auth()->user()->can('projects.view');
+    $levels = collect($levelStats)->filter(fn ($l) => $l['students'] > 0 || $l['projects'] > 0);
+@endphp
 
-<div class="row g-3 mb-4">
-    @foreach([
-        ['Students', $stats['students'], 'people', 'primary', route('admin.students.index')],
-        ['Faculty', $stats['faculties'], 'person-badge', 'success', route('admin.faculties.index')],
-        ['Departments', $stats['departments'], 'building', 'warning', route('admin.departments.index')],
-        ['Projects', $stats['projects'], 'folder', 'info', route('admin.projects.index')],
-    ] as [$label, $value, $icon, $tone, $url])
-        <div class="col-6 col-md-3">
-            <a href="{{ $url }}" class="text-decoration-none">
-                <div class="card stat-tile h-100">
-                    <div class="card-body d-flex align-items-center gap-3">
-                        <span class="stat-ico tone-{{ $tone }}"><i class="bi bi-{{ $icon }}"></i></span>
-                        <div>
-                            <div class="stat-num">{{ $value }}</div>
-                            <div class="stat-label">{{ $label }}</div>
-                        </div>
-                    </div>
-                </div>
+<div class="page-head d-flex flex-wrap justify-content-between align-items-end gap-2">
+    <div>
+        <h3 class="page-title">{{ $greet }}, {{ auth()->user()->name }}</h3>
+        <p class="page-sub">{{ now()->format('l, j F Y') }} · {{ $stats['departments'] }} {{ $stats['departments'] === 1 ? 'department' : 'departments' }}</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        @can('reports.view')
+            <a href="{{ route('admin.reports.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-file-earmark-bar-graph me-1"></i>Reports
             </a>
-        </div>
-    @endforeach
+        @endcan
+        @can('students.create')
+            <a href="{{ route('admin.students.create') }}" class="btn btn-primary">
+                <i class="bi bi-person-plus me-1"></i>Add student
+            </a>
+        @endcan
+    </div>
 </div>
 
-<div class="row g-3">
-    <div class="col-md-5">
-        <div class="card h-100">
-            <div class="card-header bg-white fw-semibold">Projects by Status</div>
-            @if($statusCounts->isNotEmpty())
-                <div class="card-body pb-0">
-                    <canvas id="statusChart" height="200"></canvas>
-                </div>
-            @endif
-            <ul class="list-group list-group-flush">
-                @forelse($statusCounts as $status => $count)
-                    <li class="list-group-item d-flex justify-content-between">
-                        {{ $status }}
-                        <span class="badge bg-secondary rounded-pill">{{ $count }}</span>
-                    </li>
-                @empty
-                    <li class="list-group-item text-muted">No projects yet.</li>
-                @endforelse
-                <li class="list-group-item d-flex justify-content-between text-danger">
-                    <strong>Unassigned to faculty</strong>
-                    <span class="badge bg-danger rounded-pill">{{ $unassigned }}</span>
-                </li>
-            </ul>
-        </div>
+@if($canApprovals || $canProjects)
+    <div class="row g-3 mb-4">
+        @if($canApprovals)
+            <div class="col-12 col-md-6 col-lg-4">
+                <a href="{{ route('admin.approvals.index') }}" class="attn-tile {{ $pendingCount > 0 ? 'is-hot' : '' }}">
+                    <span class="attn-n">{{ $pendingCount }}</span>
+                    <span><b>Account approvals</b><small>{{ $pendingCount > 0 ? 'New sign-ups waiting' : 'Nothing waiting' }}</small></span>
+                </a>
+            </div>
+        @endif
+        @if($canProjects)
+            <div class="col-12 col-md-6 col-lg-4">
+                <a href="{{ route('admin.projects.index', ['faculty_id' => 'unassigned']) }}" class="attn-tile {{ $unassigned > 0 ? 'is-hot' : '' }}">
+                    <span class="attn-n">{{ $unassigned }}</span>
+                    <span><b>Projects without a guide</b><small>{{ $unassigned > 0 ? 'Assign a faculty member' : 'Every project has a guide' }}</small></span>
+                </a>
+            </div>
+        @endif
     </div>
+@endif
 
-    <div class="col-md-7">
-        <div class="card h-100">
-            <div class="card-header bg-white fw-semibold d-flex justify-content-between">
-                Recent Projects
-                <a href="{{ route('admin.projects.index') }}" class="small">View all</a>
+@php
+    $P = \App\Models\Project::class;
+    $pipeline = collect([
+        ['In synopsis',    [$P::STATUS_SYNOPSIS_PENDING, $P::STATUS_SYNOPSIS_REVIEW], $P::STATUS_SYNOPSIS_REVIEW, 'pipe-c1'],
+        ['Needs correction', [$P::STATUS_CORRECTION],        $P::STATUS_CORRECTION,        'pipe-c6'],
+        ['Approved',       [$P::STATUS_SYNOPSIS_APPROVED],   $P::STATUS_SYNOPSIS_APPROVED, 'pipe-c2'],
+        ['Final uploaded', [$P::STATUS_FINAL_SUBMITTED],     $P::STATUS_FINAL_SUBMITTED,   'pipe-c3'],
+        ['Reviewed',       [$P::STATUS_FINAL_REVIEWED],      $P::STATUS_FINAL_REVIEWED,    'pipe-c4'],
+        ['Result declared',[$P::STATUS_COMPLETED],           $P::STATUS_COMPLETED,         'pipe-c5'],
+        ['Rejected',       [$P::STATUS_REJECTED],            $P::STATUS_REJECTED,          'pipe-c7'],
+    ])->map(fn ($s) => [
+        'label' => $s[0],
+        'count' => (int) collect($s[1])->sum(fn ($st) => $statusCounts[$st] ?? 0),
+        'url'   => route('admin.projects.index', ['status' => $s[2]]),
+        'class' => $s[3],
+    ])->filter(fn ($s) => $s['count'] > 0 || in_array($s['label'], ['In synopsis', 'Approved', 'Final uploaded', 'Reviewed', 'Result declared'], true));
+    $pipeTotal = $pipeline->sum('count');
+@endphp
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span>Where every project stands</span>
+        @can('projects.view')
+            <a href="{{ route('admin.projects.index') }}" class="small fw-semibold">Open projects</a>
+        @endcan
+    </div>
+    <div class="card-body">
+        @if($pipeTotal === 0)
+            <p class="text-muted mb-0">No projects yet. They will appear here once students send a synopsis.</p>
+        @else
+            <div class="pipe-bar" role="img"
+                 aria-label="Projects by stage: {{ $pipeline->map(fn ($s) => $s['label'].' '.$s['count'])->implode(', ') }}">
+                @foreach($pipeline as $s)
+                    @if($s['count'] > 0)
+                        <a href="{{ $s['url'] }}" class="{{ $s['class'] }}" style="flex: {{ $s['count'] }}"
+                           title="{{ $s['label'] }}: {{ $s['count'] }}" tabindex="-1" aria-hidden="true"></a>
+                    @endif
+                @endforeach
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead class="table-light">
-                        <tr><th>Project</th><th>Leader</th><th>Faculty</th><th>Status</th></tr>
-                    </thead>
-                    <tbody>
-                        @forelse($recentProjects as $project)
-                            <tr>
-                                <td><a href="{{ route('admin.projects.show', $project) }}">{{ $project->name }}</a></td>
-                                <td>{{ $project->leader?->user?->name ?? '—' }}</td>
-                                <td>{{ $project->assignment?->faculty?->user?->name ?? '—' }}</td>
-                                <td><span class="badge bg-{{ $project->statusColor() }}">{{ $project->status }}</span></td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="4" class="text-center text-muted py-4">No projects yet.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
+            <div class="pipe-legend">
+                @foreach($pipeline as $s)
+                    <a href="{{ $s['url'] }}">
+                        <div class="pipe-num">{{ $s['count'] }}</div>
+                        <div class="pipe-label"><span class="pipe-key {{ $s['class'] }}"></span>{{ $s['label'] }}</div>
+                    </a>
+                @endforeach
             </div>
-        </div>
+        @endif
+    </div>
+</div>
+
+<div class="kpi-strip mb-4">
+    <div class="kpi">
+        <a href="{{ route('admin.students.index') }}" class="kpi-label d-block">Students</a>
+        <div class="kpi-num">{{ $stats['students'] }}</div>
+        @if($levels->isNotEmpty())
+            <div class="kpi-sub">
+                @foreach($levels as $level)
+                    <a href="{{ route('admin.students.index', ['level' => $level['level']]) }}">{{ $level['short'] }} {{ $level['students'] }}</a>@if(! $loop->last) · @endif
+                @endforeach
+            </div>
+        @endif
+    </div>
+    <a class="kpi" href="{{ route('admin.faculties.index') }}">
+        <div class="kpi-label">Faculty</div>
+        <div class="kpi-num">{{ $stats['faculties'] }}</div>
+    </a>
+    <a class="kpi" href="{{ route('admin.departments.index') }}">
+        <div class="kpi-label">Departments</div>
+        <div class="kpi-num">{{ $stats['departments'] }}</div>
+    </a>
+    <div class="kpi">
+        <a href="{{ route('admin.projects.index') }}" class="kpi-label d-block">Projects</a>
+        <div class="kpi-num">{{ $stats['projects'] }}</div>
+        @if($levels->isNotEmpty())
+            <div class="kpi-sub">
+                @foreach($levels as $level)
+                    <a href="{{ route('admin.projects.index', ['level' => $level['level']]) }}">{{ $level['short'] }} {{ $level['projects'] }}</a>@if(! $loop->last) · @endif
+                @endforeach
+            </div>
+        @endif
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span>Recent projects</span>
+        <a href="{{ route('admin.projects.index') }}" class="small fw-semibold">View all</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr><th>Project</th><th>Group</th><th>Guide</th><th>Stage</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                @forelse($recentProjects as $project)
+                    <tr>
+                        <td><a href="{{ route('admin.projects.show', $project) }}" class="fw-semibold">{{ $project->name }}</a></td>
+                        <td>{{ $project->memberNames() ?: '—' }}</td>
+                        <td>
+                            @if($guide = $project->assignment?->faculty?->user?->name)
+                                {{ $guide }}
+                            @else
+                                <span class="text-danger fw-semibold">Not assigned</span>
+                            @endif
+                        </td>
+                        <td>@include('partials.mini_rail')</td>
+                        <td><span class="badge bg-{{ $project->statusColor() }}">{{ $project->status }}</span></td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <div class="empty-state">
+                                <i class="bi bi-folder d-block fs-3 mb-1"></i>No projects yet.
+                            </div>
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 </div>
 @endsection
-
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script>
-    const statusEl = document.getElementById('statusChart');
-    if (statusEl) {
-        new Chart(statusEl, {
-            type: 'doughnut',
-            data: {
-                labels: @json($statusCounts->keys()),
-                datasets: [{
-                    data: @json($statusCounts->values()),
-                    backgroundColor: ['#64748b', '#0ea5e9', '#2563eb', '#d97706', '#059669', '#7c3aed', '#0d9488'],
-                    borderWidth: 0,
-                }],
-            },
-            options: {
-                plugins: { legend: { position: 'bottom' } },
-                cutout: '60%',
-            },
-        });
-    }
-</script>
-@endpush

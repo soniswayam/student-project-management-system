@@ -23,7 +23,7 @@
                     <label class="form-label">Semester</label>
                     <select name="semester" class="form-select" required>
                         <option value="">—</option>
-                        @foreach(range(1, 8) as $s)
+                        @foreach(\App\Models\Department::semesterOptions() as $s)
                             <option value="{{ $s }}" @selected(old('semester', $student->semester) == $s)>{{ $s }}</option>
                         @endforeach
                     </select>

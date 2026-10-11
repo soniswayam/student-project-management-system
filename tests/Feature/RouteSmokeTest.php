@@ -39,7 +39,6 @@ class RouteSmokeTest extends TestCase
         FacultyAssignment::create(['project_id' => $project->id, 'faculty_id' => $faculty->id, 'assigned_at' => now()]);
 
         $checks = [
-            // Super admin — full access incl. structural pages.
             [$super, 'GET', route('admin.dashboard')],
             [$super, 'GET', route('admin.faculties.create')],
             [$super, 'GET', route('admin.departments.index')],
@@ -48,7 +47,6 @@ class RouteSmokeTest extends TestCase
             [$super, 'GET', route('admin.roles.create')],
             [$super, 'GET', route('admin.settings.edit')],
             [$super, 'GET', route('admin.projects.synopsis', $project)],
-            // Admin — permitted operational pages.
             [$admin, 'GET', route('admin.dashboard')],
             [$admin, 'GET', route('admin.students.index')],
             [$admin, 'GET', route('admin.students.create')],
@@ -61,11 +59,9 @@ class RouteSmokeTest extends TestCase
             [$admin, 'GET', route('admin.projects.export')],
             [$admin, 'GET', route('admin.projects.pdf', $project)],
             [$admin, 'GET', route('admin.projects.certificate', $project)],
-            // Faculty.
             [$facUser, 'GET', route('faculty.dashboard')],
             [$facUser, 'GET', route('faculty.projects.index')],
             [$facUser, 'GET', route('faculty.projects.show', $project)],
-            // Student.
             [$stuUser, 'GET', route('student.dashboard')],
             [$stuUser, 'GET', route('student.project.show')],
             [$stuUser, 'GET', route('student.project.certificate')],

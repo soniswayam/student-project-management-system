@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Support\PasswordRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class UpdateAdminRequest extends FormRequest
 {
@@ -20,8 +20,12 @@ class UpdateAdminRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email,'.$admin->id],
-            'role' => ['required', Rule::exists('roles', 'name')->where('is_staff', true)],
-            'password' => ['nullable', 'confirmed', Password::min(6)],
+            'role' => [
+                'required',
+                Rule::exists('roles', 'name')->where('is_staff', true),
+                Rule::when(! $this->user()?->isSuperAdmin(), [Rule::notIn(['super_admin'])]),
+            ],
+            'password' => ['nullable', 'confirmed', PasswordRules::password()],
         ];
     }
 }

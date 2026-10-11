@@ -1,8 +1,14 @@
-{{-- Expects: $project (with leader.user, members.student.user, department, assignment.faculty.user) --}}
 <div class="card mb-3">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
         <span class="fw-semibold">{{ $project->name }}</span>
-        <span class="badge bg-{{ $project->statusColor() }}">{{ $project->status }}</span>
+        <span>
+            @if(($project->revision ?? 1) > 1)
+                <span class="badge bg-light text-dark border me-1" title="This synopsis has been revised and resubmitted">
+                    Revision {{ $project->revision }}
+                </span>
+            @endif
+            <span class="badge bg-{{ $project->statusColor() }}">{{ $project->status }}</span>
+        </span>
     </div>
     <div class="card-body">
         <div class="row">
@@ -16,13 +22,16 @@
                 {{ $project->assignment?->faculty?->user?->name ?? 'Not assigned yet' }}
             </div>
             @php $hideResult = auth()->user()->isStudent() && ! $project->isCompleted(); @endphp
-            <div class="col-md-6 mb-2"><span class="text-muted small">Final Result</span><br>
-                @if($hideResult)
+
+            @if($hideResult)
+                <div class="col-md-6 mb-2"><span class="text-muted small">Final Result</span><br>
                     <span class="text-muted">Result awaited</span>
-                @else
-                    {{ $project->marks !== null ? $project->marks . ' / 100' : '—' }}
-                @endif
-            </div>
+                </div>
+            @elseif($project->marksLabel())
+                <div class="col-md-6 mb-2"><span class="text-muted small">Final Result</span><br>
+                    {{ $project->marksLabel() }}
+                </div>
+            @endif
             <div class="col-12 mb-2"><span class="text-muted small">Abstract / Synopsis</span><br>{{ $project->abstract }}</div>
             @if($project->final_remarks && ! $hideResult)
                 <div class="col-12"><span class="text-muted small">Final Remarks</span><br>{{ $project->final_remarks }}</div>
@@ -30,16 +39,13 @@
         </div>
 
         <hr>
-        <span class="text-muted small">Members</span>
+        <span class="text-muted small">Group</span>
         <ul class="list-group list-group-flush">
             @foreach($project->members as $member)
-                <li class="list-group-item px-0 d-flex justify-content-between">
-                    <span>
-                        <i class="bi bi-person me-1"></i>
-                        {{ $member->student?->user?->name ?? '—' }}
-                        <span class="text-muted small">({{ $member->student?->roll_no }})</span>
-                    </span>
-                    <span class="badge bg-{{ $member->role_in_project === 'leader' ? 'dark' : 'secondary' }}">{{ ucfirst($member->role_in_project) }}</span>
+                <li class="list-group-item px-0">
+                    <i class="bi bi-person me-1"></i>
+                    {{ $member->student?->user?->name ?? '—' }}
+                    <span class="text-muted small">({{ $member->student?->roll_no }})</span>
                 </li>
             @endforeach
         </ul>

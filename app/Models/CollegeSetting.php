@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class CollegeSetting extends Model
 {
-    /** Per-request in-memory cache of the settings row. */
     protected static ?self $cached = null;
 
     protected static bool $loaded = false;
@@ -20,9 +19,19 @@ class CollegeSetting extends Model
         'phone',
         'website',
         'logo_path',
+        'project_grace_hours',
+        'assignment_grace_hours',
+        'duplicate_warn_percent',
+        'duplicate_block_percent',
+        'reminder_lead_days',
     ];
 
-    /** The single settings row (memoized for the request), or null if not seeded. */
+    public const DEFAULT_WARN_PERCENT = 60;
+
+    public const DEFAULT_BLOCK_PERCENT = 85;
+
+    public const DEFAULT_REMINDER_LEAD_DAYS = 3;
+
     public static function current(): ?self
     {
         if (! static::$loaded) {
@@ -33,10 +42,21 @@ class CollegeSetting extends Model
         return static::$cached;
     }
 
-    /**
-     * The college logo as a base64 data-URI for reliable embedding in
-     * DomPDF-generated documents, or null when no logo is configured.
-     */
+    public static function warnPercent(): int
+    {
+        return (int) (static::current()?->duplicate_warn_percent ?? self::DEFAULT_WARN_PERCENT);
+    }
+
+    public static function blockPercent(): int
+    {
+        return (int) (static::current()?->duplicate_block_percent ?? self::DEFAULT_BLOCK_PERCENT);
+    }
+
+    public static function reminderLeadDays(): int
+    {
+        return (int) (static::current()?->reminder_lead_days ?? self::DEFAULT_REMINDER_LEAD_DAYS);
+    }
+
     public static function logoDataUri(): ?string
     {
         $path = config('college.logo');
@@ -56,7 +76,6 @@ class CollegeSetting extends Model
         return 'data:'.$mime.';base64,'.base64_encode(file_get_contents($full));
     }
 
-    /** Shape matching config/college.php so it can override config('college'). */
     public function toConfigArray(): array
     {
         return [

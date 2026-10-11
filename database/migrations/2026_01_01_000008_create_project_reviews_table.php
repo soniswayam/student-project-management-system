@@ -12,9 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
             $table->foreignId('faculty_id')->constrained('faculties')->cascadeOnDelete();
-            // Which phase the review belongs to.
             $table->enum('stage', ['synopsis', 'final']);
-            // Faculty decision for this review entry.
             $table->enum('action', ['approved', 'rejected', 'correction', 'reviewed']);
             $table->text('comments')->nullable();
             $table->unsignedSmallInteger('marks')->nullable();

@@ -7,11 +7,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Faculty ↔ Department is many-to-many: one professor teaches across
-     * several courses/departments (e.g. BCA, MSc IT, MSc CA).
-     * faculties.department_id is kept as the "primary" department.
-     */
     public function up(): void
     {
         Schema::create('faculty_department', function (Blueprint $table) {
@@ -21,7 +16,6 @@ return new class extends Migration
             $table->unique(['faculty_id', 'department_id']);
         });
 
-        // Backfill: every existing faculty's current department becomes a pivot row.
         foreach (DB::table('faculties')->whereNotNull('department_id')->get() as $faculty) {
             DB::table('faculty_department')->insertOrIgnore([
                 'faculty_id' => $faculty->id,
