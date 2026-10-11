@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Support\PasswordRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Password;
 
 class UpdateFacultyRequest extends FormRequest
 {
@@ -31,7 +31,7 @@ class UpdateFacultyRequest extends FormRequest
             'department_ids.*' => ['integer', 'exists:departments,id'],
             'designation' => ['nullable', 'string', 'max:100'],
             'phone' => ['nullable', 'string', 'max:20'],
-            'password' => ['nullable', 'confirmed', Password::min(6)],
+            'password' => ['nullable', 'confirmed', PasswordRules::password()],
         ];
     }
 }

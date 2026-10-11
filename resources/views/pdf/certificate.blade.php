@@ -48,7 +48,9 @@
             under the guidance of {{ $project->assignment?->faculty?->user?->name ?? 'the department' }}.
         </div>
 
-        <div class="marks">Grade Awarded: <strong>{{ $project->marks }}/100</strong></div>
+        @if($project->marksLabel())
+            <div class="marks">Grade Awarded: <strong>{{ $project->marksLabel() }}</strong></div>
+        @endif
 
         <div class="footer">
             <span class="sign">{{ $project->assignment?->faculty?->user?->name ?? 'Faculty' }}<br>Guide</span>

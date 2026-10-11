@@ -1,4 +1,3 @@
-{{-- Print-only college letterhead. Pass $docTitle. Hidden on screen, shown when printing. --}}
 @php $college = config('college'); $logoPath = config('college.logo'); @endphp
 <div class="print-only print-lh">
     @if($logoPath && file_exists(storage_path('app/public/'.$logoPath)))

@@ -41,8 +41,8 @@ class RoleController extends Controller
 
     public function edit(Role $role)
     {
-        // The super_admin role always has full access and is not editable.
         abort_if($role->name === 'super_admin', 403, 'The Super Admin role cannot be edited.');
+        $this->guardOwnRole($role);
 
         return view('admin.roles.edit', ['role' => $role, 'catalog' => Role::catalog()]);
     }
@@ -50,6 +50,7 @@ class RoleController extends Controller
     public function update(UpdateRoleRequest $request, Role $role): RedirectResponse
     {
         abort_if($role->name === 'super_admin', 403);
+        $this->guardOwnRole($role);
 
         $data = $request->validated();
 
@@ -74,5 +75,12 @@ class RoleController extends Controller
         $role->delete();
 
         return back()->with('success', 'Role deleted.');
+    }
+
+    private function guardOwnRole(Role $role): void
+    {
+        $user = auth()->user();
+
+        abort_if(! $user->isSuperAdmin() && $user->role === $role->name, 403, 'You cannot change the permissions of your own role.');
     }
 }

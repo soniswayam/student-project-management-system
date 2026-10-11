@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreStudentRequest;
 use App\Http\Requests\Admin\UpdateStudentRequest;
+use App\Models\AcademicYear;
 use App\Models\Department;
 use App\Models\Student;
 use App\Models\User;
+use App\Support\PasswordRules;
 use App\Support\SpreadsheetExporter;
 use App\Support\SpreadsheetImporter;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +24,6 @@ class StudentController extends Controller
     {
         $query = Student::with('user', 'department', 'membership.project');
 
-        // Search by name / email / roll number.
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -36,32 +37,48 @@ class StudentController extends Controller
             $query->where('department_id', $request->department_id);
         }
 
+        if ($request->filled('level')) {
+            $query->whereHas('department', fn ($d) => $d->where('level', $request->level));
+        }
+
         if ($request->filled('semester')) {
             $query->where('semester', $request->semester);
         }
 
         if ($request->filled('status')) {
             $query->whereHas('user', fn ($u) => $u->where('status', $request->status));
+        } else {
+            $query->whereHas('user', fn ($u) => $u->where('status', '!=', User::STATUS_GRADUATED));
         }
 
-        $students = $query->orderBy('roll_no')->paginate(15)->withQueryString();
+        $students = $query->with('user', 'department', 'membership.project')
+            ->orderBy('roll_no')
+            ->paginate(15)
+            ->withQueryString();
+
         $departments = Department::orderBy('name')->get();
 
-        // Distinct semesters actually in use, for the filter dropdown.
+        $currentYear = AcademicYear::current();
+
         $semesters = Student::whereNotNull('semester')
             ->distinct()
             ->orderBy('semester')
             ->pluck('semester');
 
-        // Count of accounts awaiting approval, for the "Pending" button badge.
         $pendingCount = User::where('role', 'student')
             ->where('status', User::STATUS_PENDING)
             ->count();
 
-        return view('admin.students.index', compact('students', 'departments', 'semesters', 'pendingCount'));
+        $overSemesterCount = $this->studentsPastFinalSemester()->count();
+
+        $alumniCount = Student::whereHas('user', fn ($u) => $u->where('status', User::STATUS_GRADUATED))->count();
+
+        return view('admin.students.index', compact(
+            'students', 'departments', 'semesters', 'pendingCount',
+            'overSemesterCount', 'currentYear', 'alumniCount'
+        ));
     }
 
-    /** Export the full (optionally filtered) student list as an Excel (.xlsx) sheet. */
     public function export()
     {
         $students = Student::with('user', 'department')
@@ -73,7 +90,9 @@ class StudentController extends Controller
             $s->user?->email,
             $s->roll_no,
             $s->department?->name ?? '—',
+            $s->department?->levelLabel() ?? '—',
             $s->semester ?? '—',
+            $s->department?->finalSemester() ?? '—',
             $s->phone ?? '—',
             ucfirst($s->user?->status ?? 'active'),
         ])->toArray();
@@ -81,7 +100,7 @@ class StudentController extends Controller
         return SpreadsheetExporter::download(
             'students-'.now()->format('Y-m-d').'.xlsx',
             'Student List — '.config('college.name'),
-            ['Name', 'Email', 'Roll No', 'Department', 'Semester', 'Phone', 'Status'],
+            ['Name', 'Email', 'Roll No', 'Department', 'Level', 'Semester', 'Final Sem', 'Phone', 'Status'],
             $rows
         );
     }
@@ -141,7 +160,7 @@ class StudentController extends Controller
             $student->user->update([
                 'name' => $data['name'],
                 'email' => $data['email'],
-                'status' => $data['status'],
+                'status' => $student->user->isGraduated() ? User::STATUS_GRADUATED : $data['status'],
             ] + (! empty($data['password']) ? ['password' => $data['password']] : []));
 
             $student->update([
@@ -155,12 +174,19 @@ class StudentController extends Controller
         return redirect()->route('admin.students.index')->with('success', 'Student updated.');
     }
 
-    /** Change only the account status (activate / deactivate / block / approve). */
     public function updateStatus(Request $request, Student $student): RedirectResponse
     {
         $data = $request->validate([
-            'status' => ['required', Rule::in(User::STATUSES)],
+            'status' => ['required', Rule::in([
+                User::STATUS_ACTIVE,
+                User::STATUS_PENDING,
+                User::STATUS_BLOCKED,
+            ])],
         ]);
+
+        if ($student->user->isGraduated()) {
+            return back()->with('error', 'This student is an alumnus. Use "Restore" on the Alumni page to make them a current student again.');
+        }
 
         $student->user->update(['status' => $data['status']]);
 
@@ -175,23 +201,15 @@ class StudentController extends Controller
 
     public function destroy(Student $student): RedirectResponse
     {
-        // Guard: never orphan or delete a student who is part of a project.
         if ($student->membership()->exists() || $student->ledProject()->exists()) {
             return back()->with('error', 'This student is linked to a project and cannot be deleted.');
         }
 
-        // Deleting the user cascades to the student row.
         $student->user->delete();
 
         return back()->with('success', 'Student deleted.');
     }
 
-    /**
-     * Promote one or more students to the next semester (semester + 1).
-     * Students already in their course's final semester (department.total_semesters)
-     * are skipped so nobody overflows past the last term. Powers both the per-row
-     * "Next sem" button and the bulk "Promote selected" action on the students list.
-     */
     public function promoteSemester(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -206,7 +224,6 @@ class StudentController extends Controller
 
         DB::transaction(function () use ($students, &$promoted, &$skipped) {
             foreach ($students as $student) {
-                // Only numeric semesters can be advanced; skip blanks/oddities.
                 if (! is_numeric($student->semester)) {
                     $skipped++;
 
@@ -214,9 +231,8 @@ class StudentController extends Controller
                 }
 
                 $current = (int) $student->semester;
-                $max = $student->department?->total_semesters;
+                $max = $student->department?->finalSemester();
 
-                // Skip anyone already at (or past) their course's final semester.
                 if ($max !== null && $current >= $max) {
                     $skipped++;
 
@@ -236,17 +252,71 @@ class StudentController extends Controller
         return back()->with('success', $message);
     }
 
-    /** Show the bulk CSV/Excel import form. */
+    public function semesterReview()
+    {
+        return view('admin.students.semester-review', [
+            'students' => $this->studentsPastFinalSemester(),
+        ]);
+    }
+
+    public function fixSemesters(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'student_ids' => ['required', 'array', 'min:1'],
+            'student_ids.*' => ['integer', 'exists:students,id'],
+        ]);
+
+        $fixed = 0;
+
+        DB::transaction(function () use ($data, &$fixed) {
+            $students = Student::with('department')->whereIn('id', $data['student_ids'])->get();
+
+            foreach ($students as $student) {
+                $final = $student->department?->finalSemester();
+
+                if ($final === null || ! is_numeric($student->semester) || (int) $student->semester <= $final) {
+                    continue;
+                }
+
+                $student->update(['semester' => (string) $final]);
+                $fixed++;
+            }
+        });
+
+        $skipped = count($data['student_ids']) - $fixed;
+        $message = "Moved {$fixed} student(s) back to their final semester.";
+        if ($skipped > 0) {
+            $message .= " {$skipped} no longer needed fixing and were left alone.";
+        }
+
+        return back()->with('success', $message);
+    }
+
+    private function studentsPastFinalSemester()
+    {
+        return Student::with('user', 'department')
+            ->whereNotNull('semester')
+            ->whereHas('department')
+            ->get()
+            ->filter(function (Student $student) {
+                $final = $student->department?->finalSemester();
+
+                return $final !== null
+                    && is_numeric($student->semester)
+                    && (int) $student->semester > $final;
+            })
+            ->sortBy([
+                fn (Student $a, Student $b) => ($a->department?->name ?? '') <=> ($b->department?->name ?? ''),
+                fn (Student $a, Student $b) => $a->roll_no <=> $b->roll_no,
+            ])
+            ->values();
+    }
+
     public function importForm()
     {
         return view('admin.students.import');
     }
 
-    /**
-     * Import students from an uploaded CSV/XLSX. Each row is validated
-     * independently; good rows are created, bad/duplicate rows are collected
-     * and reported so a single mistake never aborts the whole batch.
-     */
     public function import(Request $request): RedirectResponse
     {
         $request->validate([
@@ -265,7 +335,6 @@ class StudentController extends Controller
             return back()->with('error', 'The file has no data rows.');
         }
 
-        // Department lookup by name or code (case-insensitive).
         $departments = Department::all();
         $deptLookup = [];
         foreach ($departments as $dept) {
@@ -279,7 +348,7 @@ class StudentController extends Controller
         $failures = [];
 
         foreach ($rows as $i => $row) {
-            $lineNo = $i + 2; // +1 for header, +1 for 1-based rows
+            $lineNo = $i + 2;
 
             $validator = Validator::make($row, [
                 'name' => ['required', 'string', 'max:255'],
@@ -287,7 +356,7 @@ class StudentController extends Controller
                 'roll_no' => ['required', 'string', 'max:50', 'unique:students,roll_no'],
                 'semester' => ['required', 'string', 'max:20'],
                 'phone' => ['nullable', 'string', 'max:20'],
-                'password' => ['required', 'string', 'min:6'],
+                'password' => ['required', 'string', PasswordRules::password()],
             ]);
 
             $departmentId = $deptLookup[strtolower($row['department'] ?? '')] ?? null;

@@ -7,7 +7,6 @@ use Illuminate\Database\Seeder;
 
 class RoleSeeder extends Seeder
 {
-    /** The four system roles and their default permission sets. */
     public function run(): void
     {
         Role::updateOrCreate(['name' => 'super_admin'], [
@@ -22,11 +21,14 @@ class RoleSeeder extends Seeder
             'permissions' => [
                 'dashboard.view',
                 'students.view', 'students.create', 'students.edit',
+                'alumni.view', 'alumni.manage',
                 'faculty.view',
                 'departments.view',
                 'projects.view', 'projects.assign', 'projects.export',
                 'assignments.view', 'assignments.manage',
-                'reports.view',
+                'reports.view', 'similarity.view', 'workload.view',
+                'archive.view',
+                'approvals.manage',
             ],
             'is_staff' => true,
             'is_system' => true,

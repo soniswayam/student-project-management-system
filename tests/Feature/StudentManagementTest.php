@@ -25,7 +25,6 @@ class StudentManagementTest extends TestCase
         parent::setUp();
         $this->seed(\Database\Seeders\RoleSeeder::class);
         $this->dept = Department::create(['name' => 'CSE', 'code' => 'CSE']);
-        // Super admin bypasses every permission check.
         $this->admin = User::create([
             'name' => 'Root', 'email' => 'root@test.com',
             'password' => 'password', 'role' => 'super_admin',
@@ -86,7 +85,6 @@ class StudentManagementTest extends TestCase
         $student = $this->makeStudent('s@test.com', 'R1');
         $original = $student->user->password;
 
-        // Update without password -> keeps old hash.
         $this->actingAs($this->admin)->put(route('admin.students.update', $student), [
             'name' => 'Renamed', 'email' => 's@test.com', 'roll_no' => 'R1',
             'department_id' => $this->dept->id, 'semester' => '4', 'status' => 'active',
@@ -177,7 +175,6 @@ class StudentManagementTest extends TestCase
 
     public function test_bulk_import_creates_valid_rows_and_reports_failures(): void
     {
-        // Row 2 valid, row 3 invalid (bad department), row 4 duplicate email of row 2.
         $csv = implode("\n", [
             'name,email,roll_no,department,semester,phone,password',
             'Alice,alice@test.com,IMP1,CSE,3,900,secret123',
@@ -191,7 +188,6 @@ class StudentManagementTest extends TestCase
             ->assertRedirect(route('admin.students.import.form'))
             ->assertSessionHas('success');
 
-        // Only Alice imported.
         $this->assertDatabaseHas('users', ['email' => 'alice@test.com', 'role' => 'student', 'status' => 'active']);
         $this->assertDatabaseMissing('users', ['email' => 'bob@test.com']);
         $this->assertDatabaseCount('students', 1);

@@ -8,8 +8,7 @@
             <div class="d-flex gap-2">
                 <a href="{{ route('student.assignments.exportPdf') }}" class="btn btn-danger"><i
                         class="bi bi-file-earmark-pdf"></i> PDF</a>
-                {{-- <a href="{{ route('student.assignments.export') }}" class="btn btn-success"><i
-                        class="bi bi-file-earmark-excel"></i> Excel</a> --}}
+
             </div>
         @endunless
     </div>
@@ -43,12 +42,15 @@
                                     <span class="badge bg-secondary">Pending</span>
                                 @endif
                             </div>
+                            @php $window = $assignment->submissionWindow(); @endphp
                             <p class="text-muted small mb-2">
                                 By {{ $assignment->faculty->user->name ?? 'Faculty' }}
                                 @if($assignment->due_date)
                                     · Due {{ $assignment->due_date->format('d M Y, H:i') }}
-                                    @if($assignment->isPastDue())
-                                        <span class="badge bg-danger ms-1">Past due</span>
+                                    @if($window->isClosed())
+                                        <span class="badge bg-danger ms-1">Closed</span>
+                                    @elseif($window->isInGrace())
+                                        <span class="badge bg-warning text-dark ms-1">Overdue — {{ $window->timeLeftForHumans() }} left</span>
                                     @endif
                                 @endif
                             </p>
@@ -67,11 +69,39 @@
                                 <p class="small text-success mb-2">
                                     <i class="bi bi-check-circle"></i>
                                     Submitted on {{ $mine->submitted_at->format('d M Y, H:i') }}
-                                    @if($mine->isLate())<span class="badge bg-warning text-dark">Late</span>@endif
+                                    @if($mine->isLate())
+                                        <span class="badge bg-warning text-dark">Late{{ $mine->lateLabel() ? ' · '.$mine->lateLabel() : '' }}</span>
+                                    @endif
                                 </p>
+
+                                @if($mine->hasMarks())
+                                    <p class="small mb-2">
+                                        <span class="badge bg-success">Marks: {{ $mine->marksLabel() }}</span>
+                                    </p>
+                                @endif
+
+                                @if($mine->isChecked() && $mine->feedback)
+                                    <p class="small mb-2"><span class="text-muted">Feedback:</span> {{ $mine->feedback }}</p>
+                                @endif
                             @endif
 
-                            @if(!$mine || !$mine->isChecked())
+                            @php $reup = $mine?->openRevisionRequest(); @endphp
+                            @include('partials.revision_banner', ['revisionRequest' => $reup])
+
+                            @if($window->isClosed() && ! $reup)
+                                <p class="small text-muted mb-0">
+                                    <i class="bi bi-lock me-1"></i>
+                                    Submissions closed on {{ $window->closesAt()->format('d M Y, H:i') }}.
+                                    @unless($mine) You did not submit this assignment. @endunless
+                                </p>
+                            @elseif(!$mine || $reup)
+                                @if($window->isInGrace() && ! $reup)
+                                    <div class="alert alert-warning py-2 px-2 small mb-2">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                        Past due — you can still submit for {{ $window->timeLeftForHumans() }},
+                                        but it will be marked <strong>late</strong>.
+                                    </div>
+                                @endif
                                 <form method="POST" action="{{ route('student.assignments.submit', $assignment) }}"
                                     enctype="multipart/form-data">
                                     @csrf

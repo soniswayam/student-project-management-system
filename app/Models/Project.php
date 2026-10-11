@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Support\SubmissionWindow;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
 class Project extends Model
 {
@@ -14,15 +17,22 @@ class Project extends Model
         'name',
         'leader_student_id',
         'department_id',
+        'academic_year_id',
         'frontend_tech',
         'backend_tech',
         'abstract',
         'status',
+        'revision',
+        'deadline_override',
+        'deadline_override_reason',
         'marks',
         'final_remarks',
     ];
 
-    // ----- Status constants -----
+    protected $casts = [
+        'deadline_override' => 'datetime',
+    ];
+
     public const STATUS_SYNOPSIS_PENDING = 'Synopsis Pending';
 
     public const STATUS_SYNOPSIS_REVIEW = 'Synopsis Under Review';
@@ -39,8 +49,6 @@ class Project extends Model
 
     public const STATUS_COMPLETED = 'Completed';
 
-    // ----- Relationships -----
-
     public function leader(): BelongsTo
     {
         return $this->belongsTo(Student::class, 'leader_student_id');
@@ -49,6 +57,11 @@ class Project extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function academicYear(): BelongsTo
+    {
+        return $this->belongsTo(AcademicYear::class);
     }
 
     public function members(): HasMany
@@ -71,11 +84,91 @@ class Project extends Model
         return $this->hasMany(ProjectReview::class)->latest();
     }
 
-    // ----- Convenience helpers -----
+    public function similarities(): HasMany
+    {
+        return $this->hasMany(ProjectSimilarity::class)->orderByDesc('score');
+    }
+
+    public function viva(): HasOne
+    {
+        return $this->hasOne(Viva::class);
+    }
+
+    public function revisionRequests(): HasMany
+    {
+        return $this->hasMany(RevisionRequest::class)->latest();
+    }
+
+    public function guideHistory(): HasMany
+    {
+        return $this->hasMany(FacultyAssignmentHistory::class)->latest('changed_at');
+    }
+
+    public function openFinalRevisionRequest(): ?RevisionRequest
+    {
+        return $this->revisionRequests()
+            ->open()
+            ->stage(RevisionRequest::STAGE_FINAL)
+            ->first();
+    }
+
+    public function scopeInActiveYear(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q) {
+            $q->whereNull('academic_year_id')
+                ->orWhereHas('academicYear', fn (Builder $y) => $y->whereNull('archived_at'));
+        });
+    }
+
+    public function scopeOrderByDepartmentAndSemester(Builder $query): Builder
+    {
+        $leaderSemester = fn () => Student::query()->whereColumn('students.id', 'projects.leader_student_id');
+
+        return $query
+            ->orderBy(Department::select('name')->whereColumn('departments.id', 'projects.department_id'))
+            ->orderBy($leaderSemester()->selectRaw('LENGTH(semester)'))
+            ->orderBy($leaderSemester()->select('semester'))
+            ->latest();
+    }
+
+    public function scopeInSemester(Builder $query, ?string $semester): Builder
+    {
+        return $query->when(
+            $semester !== null && $semester !== '',
+            fn (Builder $q) => $q->whereHas('leader', fn (Builder $s) => $semester === 'none'
+                ? $s->whereNull('semester')
+                : $s->where('semester', $semester))
+        );
+    }
+
+    public function scopeInArchivedYear(Builder $query): Builder
+    {
+        return $query->whereHas('academicYear', fn (Builder $y) => $y->whereNotNull('archived_at'));
+    }
 
     public function assignedFaculty(): ?Faculty
     {
         return $this->assignment?->faculty;
+    }
+
+    public function memberNames(): string
+    {
+        return $this->members
+            ->map(fn (ProjectMember $m) => $m->student?->user?->name)
+            ->filter()
+            ->implode(', ');
+    }
+
+    public function groupLabel(): string
+    {
+        $semester = $this->leader?->semester;
+
+        return ($this->department?->name ?? 'No department').' · '.($semester ? 'Sem '.$semester : 'Semester not set');
+    }
+
+    public function isArchived(): bool
+    {
+        return (bool) $this->academicYear?->isArchived();
     }
 
     public function isSynopsisApproved(): bool
@@ -88,7 +181,6 @@ class Project extends Model
         ], true);
     }
 
-    /** True once the student has submitted the final project (or beyond). */
     public function isSubmitted(): bool
     {
         return in_array($this->status, [
@@ -98,13 +190,68 @@ class Project extends Model
         ], true);
     }
 
-    /** True only when the project is completed and graded. */
-    public function isCompleted(): bool
+    public function deadline(): ?Carbon
     {
-        return $this->status === self::STATUS_COMPLETED && $this->marks !== null;
+        return $this->deadline_override
+            ?? $this->department?->submission_deadline
+            ?? DegreeLevelSetting::deadlineFor($this->department?->level);
     }
 
-    /** Bootstrap badge colour for the current status. */
+    public function deadlineSource(): ?string
+    {
+        return match (true) {
+            $this->deadline_override !== null => 'override',
+            $this->department?->submission_deadline !== null => 'department',
+            DegreeLevelSetting::deadlineFor($this->department?->level) !== null => 'level',
+            default => null,
+        };
+    }
+
+    public function maxMarks(): ?int
+    {
+        return DegreeLevelSetting::maxMarksFor($this->department?->level);
+    }
+
+    public function marksLabel(): ?string
+    {
+        if ($this->marks === null || ! $this->isLevelMarked()) {
+            return null;
+        }
+
+        $max = $this->maxMarks();
+
+        return $max ? "{$this->marks} / {$max}" : (string) $this->marks;
+    }
+
+    public function isLevelMarked(): bool
+    {
+        return $this->maxMarks() !== null;
+    }
+
+    public function isVivaMissing(): bool
+    {
+        return DegreeLevelSetting::vivaRequiredFor($this->department?->level)
+            && $this->viva === null;
+    }
+
+    public function submissionWindow(): SubmissionWindow
+    {
+        return SubmissionWindow::forProject($this->deadline());
+    }
+
+    public function isSynopsisEditable(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_CORRECTION,
+            self::STATUS_REJECTED,
+        ], true);
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED;
+    }
+
     public function statusColor(): string
     {
         return match ($this->status) {

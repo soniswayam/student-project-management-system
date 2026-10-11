@@ -6,10 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Track the student's current semester. Nullable so existing rows are
-     * unaffected; the admin forms enforce it as required going forward.
-     */
     public function up(): void
     {
         Schema::table('students', function (Blueprint $table) {

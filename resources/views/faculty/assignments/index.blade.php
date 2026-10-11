@@ -9,8 +9,39 @@
     </a>
 </div>
 
+@if(isset($picker))
+    @include('partials.class_picker', [
+        'action' => route('faculty.assignments.index'),
+        'allUrl' => route('faculty.assignments.index', ['all' => 1]),
+        'noun' => 'assignments',
+    ])
+@else
+<form method="GET" class="row g-2 mb-3 align-items-center">
+    <div class="col-auto">
+        <select name="department_id" class="form-select" onchange="this.form.submit()">
+            <option value="">All departments</option>
+            @foreach($departments as $dept)
+                <option value="{{ $dept->id }}" @selected(request('department_id') == $dept->id)>{{ $dept->name }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div class="col-auto">
+        <select name="semester" class="form-select" onchange="this.form.submit()">
+            <option value="">All semesters</option>
+            <option value="common" @selected(request('semester') === 'common')>Common to all semesters</option>
+            @foreach($semesters as $sem)
+                <option value="{{ $sem }}" @selected(request('semester') == $sem)>Sem {{ $sem }}</option>
+            @endforeach
+        </select>
+    </div>
+    <noscript><div class="col-auto"><button class="btn btn-primary">Filter</button></div></noscript>
+    <div class="col-auto">
+        <a href="{{ route('faculty.assignments.index') }}" class="small"><i class="bi bi-arrow-left-right me-1"></i>Change class</a>
+    </div>
+</form>
+
 @if($assignments->isEmpty())
-    <div class="alert alert-info">You have not created any assignments yet.</div>
+    <div class="alert alert-info">{{ (request()->filled('department_id') || request()->filled('semester')) ? 'No assignments match these filters.' : 'You have not created any assignments yet.' }}</div>
 @else
     <div class="card">
         <div class="table-responsive">
@@ -25,7 +56,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($assignments as $assignment)
+                    @foreach($assignments->groupBy(fn ($a) => $a->groupLabel()) as $groupLabel => $group)
+                        @include('partials.group_row', ['label' => $groupLabel, 'count' => $group->count(), 'colspan' => 5])
+                        @foreach($group as $assignment)
                         <tr>
                             <td>
                                 <div>{{ $assignment->title }}</div>
@@ -60,10 +93,12 @@
                                 </form>
                             </td>
                         </tr>
+                        @endforeach
                     @endforeach
                 </tbody>
             </table>
         </div>
     </div>
+@endif
 @endif
 @endsection

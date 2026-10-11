@@ -15,7 +15,7 @@
     <div class="table-responsive">
         <table class="table table-hover mb-0 align-middle">
             <thead class="table-light">
-                <tr><th>#</th><th>Name</th><th>Code</th><th>Semesters</th><th>Students</th><th>Faculty</th><th>Projects</th><th class="text-end">Actions</th></tr>
+                <tr><th>#</th><th>Name</th><th>Code</th><th>Level</th><th>Length</th><th>Project Deadline</th><th>Students</th><th>Faculty</th><th>Projects</th><th class="text-end">Actions</th></tr>
             </thead>
             <tbody>
             @forelse($departments as $dept)
@@ -23,7 +23,24 @@
                     <td>{{ $loop->iteration }}</td>
                     <td class="fw-semibold">{{ $dept->name }}</td>
                     <td><span class="badge bg-secondary">{{ $dept->code }}</span></td>
-                    <td>{{ $dept->total_semesters ? $dept->total_semesters.' sem' : '—' }}</td>
+                    <td><span class="badge bg-{{ $dept->levelColor() }}">{{ $dept->levelLabel() }}</span></td>
+                    <td>
+                        @if($dept->duration_years)
+                            {{ $dept->duration_years }} yr
+                            <div class="text-muted small">{{ $dept->finalSemester() }} semesters</div>
+                        @else
+                            <span class="text-muted">—</span>
+                        @endif
+                    </td>
+                    <td>
+                        @if($dept->submission_deadline)
+                            <span class="{{ $dept->submission_deadline->isPast() ? 'text-danger' : '' }}">
+                                {{ $dept->submission_deadline->format('d M Y, H:i') }}
+                            </span>
+                        @else
+                            <span class="text-muted">Not set</span>
+                        @endif
+                    </td>
                     <td>{{ $dept->students_count }}</td>
                     <td>{{ $dept->faculties_count }}</td>
                     <td>{{ $dept->projects_count }}</td>
@@ -40,7 +57,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="8" class="text-center text-muted py-4">No departments yet.</td></tr>
+                <tr><td colspan="10" class="text-center text-muted py-4">No departments yet.</td></tr>
             @endforelse
             </tbody>
         </table>
@@ -49,10 +66,8 @@
 
 <div class="mt-3">{{ $departments->links() }}</div>
 
-{{-- =============== Modals kept OUTSIDE the table for valid HTML =============== --}}
 @can('departments.manage')
 
-{{-- Add modal --}}
 <div class="modal fade" id="addDept" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <form class="modal-content" method="POST" action="{{ route('admin.departments.store') }}">
@@ -70,10 +85,35 @@
                     <label class="form-label">Code</label>
                     <input name="code" class="form-control" placeholder="e.g. MSCITCA" required>
                 </div>
+                <div class="row g-2">
+                    <div class="col-7 mb-3">
+                        <label class="form-label">Degree Level</label>
+                        <select name="level" class="form-select" required>
+                            <option value="graduation">Graduation (UG)</option>
+                            <option value="post_graduation">Post-Graduation (PG)</option>
+                        </select>
+                    </div>
+                    <div class="col-5 mb-3">
+                        <label class="form-label">Years</label>
+                        <input name="duration_years" type="number" min="1" max="7" value="3" class="form-control" required>
+                    </div>
+                </div>
+
                 <div class="mb-3">
                     <label class="form-label">Total Semesters <span class="text-muted fw-normal">(optional)</span></label>
-                    <input name="total_semesters" type="number" min="1" max="20" class="form-control" placeholder="e.g. 6 for BCA, 4 for MCA">
-                    <div class="form-text">The final semester of this course. Students are not promoted beyond it.</div>
+                    <input name="total_semesters" type="number" min="1" max="20" class="form-control" placeholder="Leave blank — years × 2">
+                    <div class="form-text">
+                        Left blank it is worked out as years × 2. This is the final semester of the
+                        course; students are not promoted beyond it.
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Final Project Deadline <span class="text-muted fw-normal">(optional)</span></label>
+                    <input name="submission_deadline" type="datetime-local" class="form-control">
+                    <div class="form-text">
+                        Applies to every project in this course. Leave empty for no deadline.
+                        Late uploads are accepted for a grace period after this, then blocked.
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -84,7 +124,6 @@
     </div>
 </div>
 
-{{-- Edit modals (one per department) --}}
 @foreach($departments as $dept)
     <div class="modal fade" id="editDept{{ $dept->id }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -103,10 +142,36 @@
                         <label class="form-label">Code</label>
                         <input name="code" value="{{ $dept->code }}" class="form-control" required>
                     </div>
+                    <div class="row g-2">
+                        <div class="col-7 mb-3">
+                            <label class="form-label">Degree Level</label>
+                            <select name="level" class="form-select" required>
+                                <option value="graduation" @selected($dept->level === 'graduation')>Graduation (UG)</option>
+                                <option value="post_graduation" @selected($dept->level === 'post_graduation')>Post-Graduation (PG)</option>
+                            </select>
+                        </div>
+                        <div class="col-5 mb-3">
+                            <label class="form-label">Years</label>
+                            <input name="duration_years" type="number" min="1" max="7"
+                                   value="{{ $dept->duration_years ?? 3 }}" class="form-control" required>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label">Total Semesters <span class="text-muted fw-normal">(optional)</span></label>
-                        <input name="total_semesters" type="number" min="1" max="20" value="{{ $dept->total_semesters }}" class="form-control" placeholder="e.g. 6 for BCA, 4 for MCA">
-                        <div class="form-text">The final semester of this course. Students are not promoted beyond it.</div>
+                        <input name="total_semesters" type="number" min="1" max="20" value="{{ $dept->total_semesters }}" class="form-control" placeholder="Leave blank — years × 2">
+                        <div class="form-text">
+                            Left blank it is worked out as years × 2. Students are not promoted beyond it.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Final Project Deadline <span class="text-muted fw-normal">(optional)</span></label>
+                        <input name="submission_deadline" type="datetime-local" class="form-control"
+                               value="{{ $dept->submission_deadline?->format('Y-m-d\TH:i') }}">
+                        <div class="form-text">
+                            Applies to every project in this course unless a project has its own extension.
+                            Leave empty for no deadline.
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">

@@ -9,11 +9,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureActiveMiddleware
 {
-    /**
-     * Backstop that keeps pending / blocked accounts out of role dashboards
-     * even if their status changes mid-session (e.g. an admin blocks them
-     * while they are logged in). Active/legacy-null accounts pass through.
-     */
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();

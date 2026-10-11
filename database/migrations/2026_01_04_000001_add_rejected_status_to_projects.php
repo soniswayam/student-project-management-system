@@ -6,11 +6,8 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /** Add the terminal "Rejected" status to the projects.status enum. */
     public function up(): void
     {
-        // ENUM alteration only applies to MySQL/MariaDB. SQLite (used in tests)
-        // stores enum columns as plain strings, so no schema change is needed.
         if (! in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true)) {
             return;
         }
@@ -29,7 +26,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Move any rejected projects back under review before dropping the value.
         DB::table('projects')->where('status', 'Rejected')->update(['status' => 'Synopsis Under Review']);
 
         if (! in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true)) {

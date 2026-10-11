@@ -16,7 +16,7 @@
 </div>
 
 <div class="row g-4">
-    {{-- Account details --}}
+
     <div class="col-lg-7">
         <div class="card shadow-sm h-100">
             <div class="card-header bg-transparent"><i class="bi bi-person-vcard me-2"></i>Account details</div>
@@ -50,12 +50,8 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="semester">Semester</label>
-                                <select id="semester" name="semester" class="form-select @error('semester') is-invalid @enderror" required>
-                                    @foreach(range(1, 8) as $s)
-                                        <option value="{{ $s }}" @selected((string) old('semester', $user->student->semester) === (string) $s)>{{ $s }}</option>
-                                    @endforeach
-                                </select>
-                                @error('semester') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                <input type="text" id="semester" class="form-control" value="{{ $user->student->semester ?? '—' }}" disabled>
+                                <div class="form-text">Set by your department — contact admin to correct it.</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="phone">Phone <span class="text-muted">(optional)</span></label>
@@ -94,7 +90,6 @@
         </div>
     </div>
 
-    {{-- Change password --}}
     <div class="col-lg-5">
         <div class="card shadow-sm h-100">
             <div class="card-header bg-transparent"><i class="bi bi-shield-lock me-2"></i>Change password</div>
@@ -114,6 +109,7 @@
                             'name' => 'password',
                             'label' => 'New Password',
                             'autocomplete' => 'new-password',
+                            'hint' => true,
                         ])
                     </div>
                     <div class="mb-3">

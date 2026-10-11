@@ -43,7 +43,7 @@
                         <td>{{ $submission->student->user->name ?? 'Unknown' }}</td>
                         <td>
                             {{ $submission->submitted_at->format('d M Y, H:i') }}
-                            @if($submission->isLate())<span class="badge bg-warning text-dark ms-1">Late</span>@endif
+                            @if($submission->isLate())<span class="badge bg-warning text-dark ms-1">Late{{ $submission->lateLabel() ? ' · '.$submission->lateLabel() : '' }}</span>@endif
                         </td>
                         <td>
                             @if($submission->isChecked())
@@ -53,7 +53,7 @@
                             @endif
                         </td>
                         <td>{{ $submission->feedback ?: '—' }}</td>
-                        <td class="no-print"><a href="{{ asset('storage/'.$submission->file_path) }}" target="_blank"><i class="bi bi-download"></i> Download</a></td>
+                        <td class="no-print"><a href="{{ route('files.assignment-submission', $submission) }}" target="_blank"><i class="bi bi-download"></i> Download</a></td>
                     </tr>
                 @empty
                     <tr><td colspan="5" class="text-center text-muted py-3">No submissions yet.</td></tr>

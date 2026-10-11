@@ -12,14 +12,16 @@
 <div class="row">
     <div class="col-lg-7">
         @include('partials.project_info')
+        @include('partials.similarity_flag')
         @if($project->isSynopsisApproved())
             @include('partials.submission_files')
         @endif
+        @include('partials.viva_card')
         @include('partials.reviews_timeline')
     </div>
 
     <div class="col-lg-5">
-        {{-- Synopsis review --}}
+
         @if(in_array($project->status, [\App\Models\Project::STATUS_SYNOPSIS_REVIEW, \App\Models\Project::STATUS_CORRECTION]))
             <div class="card mb-3">
                 <div class="card-header bg-white fw-semibold"><i class="bi bi-clipboard-check me-1"></i> Review Synopsis</div>
@@ -44,17 +46,31 @@
             </div>
         @endif
 
-        {{-- Final review --}}
         @if(in_array($project->status, [\App\Models\Project::STATUS_FINAL_SUBMITTED, \App\Models\Project::STATUS_FINAL_REVIEWED]))
             <div class="card mb-3">
                 <div class="card-header bg-white fw-semibold"><i class="bi bi-award me-1"></i> Review Final Project</div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('faculty.projects.reviewFinal', $project) }}">
                         @csrf
-                        <div class="mb-3">
-                            <label class="form-label">Marks (out of 100) <span class="text-muted">(optional)</span></label>
-                            <input type="number" name="marks" min="0" max="100" value="{{ $project->marks }}" class="form-control">
-                        </div>
+
+                        @if($project->isLevelMarked())
+                            <div class="mb-3">
+                                <label class="form-label" for="marks">
+                                    Marks (out of {{ $project->maxMarks() }})
+                                    <span class="text-muted">(optional)</span>
+                                </label>
+                                <input id="marks" type="number" name="marks" min="0" max="{{ $project->maxMarks() }}"
+                                       value="{{ $project->marks }}"
+                                       class="form-control @error('marks') is-invalid @enderror">
+                                @error('marks') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                        @else
+                            <p class="text-muted small">
+                                <i class="bi bi-info-circle me-1"></i>
+                                {{ $project->department?->levelLabel() ?? 'This level' }} projects are not marked —
+                                leave your assessment in the remarks below.
+                            </p>
+                        @endif
                         <div class="mb-3">
                             <label class="form-label">Comments</label>
                             <textarea name="comments" rows="3" class="form-control"></textarea>
@@ -73,11 +89,66 @@
             </div>
         @endif
 
+        @if($project->isSubmitted())
+            @php $openRequest = $project->openFinalRevisionRequest(); @endphp
+            <div class="card mb-3">
+                <div class="card-header bg-white fw-semibold">
+                    <i class="bi bi-arrow-repeat me-1"></i> Request Re-upload
+                </div>
+                <div class="card-body">
+                    @if($openRequest)
+                        <div class="alert alert-warning py-2 small mb-2">
+                            <div class="fw-semibold">Waiting on the student</div>
+                            <div>{{ $openRequest->reason }}</div>
+                            @if($openRequest->due_at)
+                                <div class="mt-1">Due {{ $openRequest->due_at->format('d M Y, H:i') }}</div>
+                            @endif
+                        </div>
+                        <form method="POST" action="{{ route('faculty.revisionRequests.cancel', $openRequest) }}">
+                            @csrf @method('PATCH')
+                            <button class="btn btn-sm btn-outline-secondary w-100">Withdraw request</button>
+                        </form>
+                    @else
+                        <p class="text-muted small">
+                            Sends the work back to the student. Their upload form reopens even if the
+                            deadline has passed, and the re-upload is not marked late.
+                        </p>
+                        <form method="POST" action="{{ route('faculty.projects.requestReupload', $project) }}">
+                            @csrf
+                            <div class="mb-2">
+                                <label class="form-label" for="reup_reason">What needs fixing?</label>
+                                <textarea id="reup_reason" name="reason" rows="3" required
+                                          class="form-control @error('reason') is-invalid @enderror"
+                                          placeholder="e.g. The report is missing the testing chapter">{{ old('reason') }}</textarea>
+                                @error('reason') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label" for="reup_due">New deadline <span class="text-muted fw-normal">(optional)</span></label>
+                                <input id="reup_due" type="datetime-local" name="due_at"
+                                       class="form-control @error('due_at') is-invalid @enderror" value="{{ old('due_at') }}">
+                                @error('due_at') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                            <button class="btn btn-warning w-100"><i class="bi bi-arrow-repeat me-1"></i>Request re-upload</button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+        @endif
+
+        @include('partials.viva_form')
+
         @if($project->status === \App\Models\Project::STATUS_SYNOPSIS_APPROVED)
             <div class="alert alert-info">Synopsis approved. Waiting for the student to upload final files.</div>
         @endif
         @if($project->status === \App\Models\Project::STATUS_COMPLETED)
-            <div class="alert alert-success">This project is completed. Final marks: <strong>{{ $project->marks }}/100</strong>.</div>
+            <div class="alert alert-success">
+                This project is completed.
+                @if($project->marksLabel())
+                    Final marks: <strong>{{ $project->marksLabel() }}</strong>.
+                @elseif($project->isLevelMarked())
+                    No marks were awarded.
+                @endif
+            </div>
         @endif
     </div>
 </div>

@@ -1,4 +1,3 @@
-{{-- Roles table. Params: $roles (paginator), $userCounts (total per role name). --}}
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover mb-0 align-middle">

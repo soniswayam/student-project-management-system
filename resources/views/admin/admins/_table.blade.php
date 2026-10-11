@@ -1,4 +1,3 @@
-{{-- Staff accounts table. Params: $admins (paginator), $roleLabels (Role map keyed by name). --}}
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover mb-0 align-middle">

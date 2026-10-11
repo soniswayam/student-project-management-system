@@ -12,18 +12,13 @@ use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database with an admin, departments,
-     * and a few demo faculty and students for testing.
-     */
     public function run(): void
     {
         $this->call(RoleSeeder::class);
         $this->seedCollegeSettings();
 
-        // ----- Super Admin (full control) -----
         User::updateOrCreate(
-            ['email' => 'superadmin@spss.test'],
+            ['email' => 'superadmin@ncc.com'],
             [
                 'name' => 'Super Admin',
                 'password' => Hash::make('password'),
@@ -31,9 +26,8 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // ----- Admin (limited: students, projects, reports) -----
         User::updateOrCreate(
-            ['email' => 'admin@spss.test'],
+            ['email' => 'admin@ncc.com'],
             [
                 'name' => 'Admin',
                 'password' => Hash::make('password'),
@@ -41,7 +35,6 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // ----- Departments (college courses) -----
         $departments = collect([
             ['name' => 'BCA', 'code' => 'BCA'],
             ['name' => 'MSC (IT & CA)', 'code' => 'MSCITCA'],
@@ -51,7 +44,6 @@ class DatabaseSeeder extends Seeder
 
         $msc = $departments->firstWhere('code', 'MSCITCA');
 
-        // ----- Demo Faculty -----
         $facUser = User::updateOrCreate(
             ['email' => 'faculty@spss.test'],
             ['name' => 'Dr. Anita Rao', 'password' => Hash::make('password'), 'role' => 'faculty']
@@ -61,7 +53,6 @@ class DatabaseSeeder extends Seeder
             ['department_id' => $msc->id, 'designation' => 'Associate Professor', 'phone' => '9000000001']
         );
 
-        // ----- Demo Students (MSC IT & CA, Sem-3) -----
         $studentsData = [
             ['name' => 'Rahul Sharma', 'email' => 'rahul@spss.test', 'roll_no' => 'MSC2026001'],
             ['name' => 'Priya Verma', 'email' => 'priya@spss.test', 'roll_no' => 'MSC2026002'],
@@ -80,7 +71,6 @@ class DatabaseSeeder extends Seeder
         }
     }
 
-    /** Seed the single college settings row from config defaults. */
     private function seedCollegeSettings(): void
     {
         if (CollegeSetting::count() === 0) {

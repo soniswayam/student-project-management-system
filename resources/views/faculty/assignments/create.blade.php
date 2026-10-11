@@ -5,7 +5,7 @@
 <div class="row justify-content-center">
     <div class="col-lg-8">
         <h3 class="mb-1"><i class="bi bi-journal-plus me-2"></i>New Assignment</h3>
-        <p class="text-muted">Post an assignment for one of your departments/courses. All its students are notified.</p>
+        <p class="text-muted">Post an assignment for one of your departments/courses. Its students (of the chosen semester) are notified.</p>
 
         @if($departments->isEmpty())
             <div class="alert alert-warning">
@@ -25,7 +25,7 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label">Department *</label>
                             <select name="department_id" class="form-select @error('department_id') is-invalid @enderror" required>
                                 <option value="">— Select department —</option>
@@ -37,6 +37,16 @@
                                 @endforeach
                             </select>
                             @error('department_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Semester</label>
+                            <select name="semester" class="form-select @error('semester') is-invalid @enderror">
+                                <option value="">All</option>
+                                @foreach($semesters as $sem)
+                                    <option value="{{ $sem }}" @selected(old('semester') == $sem)>Sem {{ $sem }}</option>
+                                @endforeach
+                            </select>
+                            @error('semester')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Subject *</label>
@@ -68,6 +78,16 @@
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Due date</label>
                             <input type="datetime-local" name="due_date" value="{{ old('due_date') }}" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Maximum marks <span class="text-muted fw-normal">(optional)</span></label>
+                            <input type="number" name="max_marks" value="{{ old('max_marks') }}" min="1" max="1000"
+                                   class="form-control @error('max_marks') is-invalid @enderror" placeholder="e.g. 10">
+                            @error('max_marks')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            <div class="form-text">Leave blank if this assignment is not marked — no marks appear anywhere.</div>
                         </div>
                     </div>
 

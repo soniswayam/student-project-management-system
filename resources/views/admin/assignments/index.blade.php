@@ -26,6 +26,14 @@
             @endforeach
         </select>
     </div>
+    <div class="col-auto">
+        <select name="semester" class="form-select" onchange="this.form.submit()">
+            <option value="">All semesters</option>
+            @foreach($semesters as $sem)
+                <option value="{{ $sem }}" @selected(request('semester') == $sem)>Sem {{ $sem }}</option>
+            @endforeach
+        </select>
+    </div>
 </form>
 
 @if($assignments->isEmpty())
@@ -46,7 +54,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($assignments as $assignment)
+                    @foreach($assignments->getCollection()->groupBy(fn ($a) => $a->groupLabel()) as $groupLabel => $group)
+                        @include('partials.group_row', ['label' => $groupLabel, 'count' => $group->count(), 'colspan' => 7])
+                        @foreach($group as $assignment)
                         <tr>
                             <td>
                                 <div>{{ $assignment->title }}</div>
@@ -69,6 +79,7 @@
                                 @endcan
                             </td>
                         </tr>
+                        @endforeach
                     @endforeach
                 </tbody>
             </table>

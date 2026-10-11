@@ -17,10 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'staff' => \App\Http\Middleware\StaffMiddleware::class,
             'perm' => \App\Http\Middleware\PermissionMiddleware::class,
             'active' => \App\Http\Middleware\EnsureActiveMiddleware::class,
+            'not-alumni' => \App\Http\Middleware\BlockAlumniWritesMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
-        );
-    })->create();
+        );    })->create();

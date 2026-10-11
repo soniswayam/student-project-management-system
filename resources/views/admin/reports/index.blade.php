@@ -59,14 +59,20 @@
     <div class="card-header bg-white fw-semibold">Graded Projects (by marks)</div>
     <div class="table-responsive">
         <table class="table mb-0 align-middle">
-            <thead class="table-light"><tr><th>Project</th><th>Leader</th><th>Faculty</th><th>Marks</th><th>Status</th></tr></thead>
+            <thead class="table-light"><tr><th>Project</th><th>Group</th><th>Faculty</th><th>Marks</th><th>Status</th></tr></thead>
             <tbody>
                 @forelse($completed as $project)
                     <tr>
                         <td>{{ $project->name }}</td>
-                        <td>{{ $project->leader?->user?->name ?? '—' }}</td>
+                        <td>{{ $project->memberNames() ?: '—' }}</td>
                         <td>{{ $project->assignment?->faculty?->user?->name ?? '—' }}</td>
-                        <td><span class="badge bg-success">{{ $project->marks }}/100</span></td>
+                        <td>
+                            @if($project->marksLabel())
+                                <span class="badge bg-success">{{ $project->marksLabel() }}</span>
+                            @else
+                                <span class="text-muted">Not graded</span>
+                            @endif
+                        </td>
                         <td><span class="badge bg-{{ $project->statusColor() }}">{{ $project->status }}</span></td>
                     </tr>
                 @empty

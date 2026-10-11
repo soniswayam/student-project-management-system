@@ -44,7 +44,7 @@
                             <label class="form-label" for="semester">Semester</label>
                             <select id="semester" name="semester" class="form-select" required>
                                 <option value="">— Select —</option>
-                                @foreach(range(1, 8) as $s)
+                                @foreach(\App\Models\Department::semesterOptions() as $s)
                                     <option value="{{ $s }}" @selected(old('semester') == $s)>{{ $s }}</option>
                                 @endforeach
                             </select>
@@ -58,6 +58,7 @@
                                 'name' => 'password',
                                 'label' => 'Password',
                                 'autocomplete' => 'new-password',
+                                'hint' => true,
                             ])
                         </div>
                         <div class="col-md-6">

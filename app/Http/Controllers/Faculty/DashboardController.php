@@ -15,7 +15,8 @@ class DashboardController extends Controller
             ? $faculty->assignments()->pluck('project_id')
             : collect();
 
-        $projects = Project::with('leader.user', 'submission')
+        $projects = Project::with('members.student.user', 'submission')
+            ->inActiveYear()
             ->whereIn('id', $projectIds)
             ->latest()
             ->get();

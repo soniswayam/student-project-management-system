@@ -1,17 +1,5 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| Admin-area permission catalog
-|--------------------------------------------------------------------------
-| The full list of capabilities a staff role can be granted. Grouped by
-| feature for the "Manage Roles" checkbox UI. The key is what routes and
-| @can() checks reference; the value is the human label.
-|
-| A role whose permissions array contains "*" is treated as all-access
-| (super admin).
-*/
-
 return [
     'Dashboard' => [
         'dashboard.view' => 'View dashboard & analytics',
@@ -21,6 +9,8 @@ return [
         'students.create' => 'Add students',
         'students.edit' => 'Edit students',
         'students.delete' => 'Delete students',
+        'alumni.view' => 'View the alumni register',
+        'alumni.manage' => 'Move students to alumni / restore them',
     ],
     'Faculty' => [
         'faculty.view' => 'View faculty',
@@ -41,10 +31,17 @@ return [
     ],
     'Reports' => [
         'reports.view' => 'View & export reports',
+        'similarity.view' => 'View plagiarism & duplicate reports',
+        'workload.view' => 'View faculty workload',
+    ],
+    'Academic Years' => [
+        'academic_years.manage' => 'Manage academic years & archive them',
+        'archive.view' => 'Browse archived projects',
     ],
     'Administration' => [
         'admins.manage' => 'Manage admin/staff accounts',
         'roles.manage' => 'Manage roles & permissions',
+        'approvals.manage' => 'Approve or reject pending accounts',
         'settings.manage' => 'Manage college settings',
     ],
 ];

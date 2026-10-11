@@ -1,14 +1,7 @@
-{{--
-    Custom compact pagination — overrides Laravel's default Bootstrap-5 pager
-    app-wide (AppServiceProvider calls Paginator::useBootstrapFive()).
-    • Tidy window: 1 … (current ± 2) … last, instead of every page number
-    • Chevron arrows + "Showing X–Y of Z" summary
-    • On phones it collapses to  ‹ [current] ›  so it never overflows
---}}
 @php
     $current = $paginator->currentPage();
     $last    = $paginator->lastPage();
-    $side    = 2; // pages shown on each side of the current page (desktop)
+    $side    = 2;
 
     $pages = collect(range(1, $last))->filter(function ($p) use ($current, $last, $side) {
         return $p == 1 || $p == $last || ($p >= $current - $side && $p <= $current + $side);
@@ -25,7 +18,7 @@
         </p>
 
         <ul class="pagination mb-0 order-1 order-sm-2">
-            {{-- Previous --}}
+
             @if ($paginator->onFirstPage())
                 <li class="page-item disabled" aria-disabled="true">
                     <span class="page-link"><i class="bi bi-chevron-left"></i></span>
@@ -38,7 +31,6 @@
                 </li>
             @endif
 
-            {{-- Page numbers (extra numbers & ellipses hide on phones) --}}
             @php $prev = 0; @endphp
             @foreach ($pages as $page)
                 @if ($page - $prev > 1)
@@ -56,7 +48,6 @@
                 @php $prev = $page; @endphp
             @endforeach
 
-            {{-- Next --}}
             @if ($paginator->hasMorePages())
                 <li class="page-item">
                     <a class="page-link" href="{{ $paginator->nextPageUrl() }}" rel="next" aria-label="Next page">

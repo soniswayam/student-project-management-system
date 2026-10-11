@@ -14,7 +14,7 @@
         </select>
         @error('faculty_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
-    <div class="col-md-6 mb-3">
+    <div class="col-md-4 mb-3">
         <label class="form-label">Department (students who submit) *</label>
         <select name="department_id" class="form-select @error('department_id') is-invalid @enderror" required>
             <option value="">— Select department —</option>
@@ -23,6 +23,16 @@
             @endforeach
         </select>
         @error('department_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+    <div class="col-md-2 mb-3">
+        <label class="form-label">Semester</label>
+        <select name="semester" class="form-select @error('semester') is-invalid @enderror">
+            <option value="">All</option>
+            @foreach($semesters as $sem)
+                <option value="{{ $sem }}" @selected(old('semester', $a?->semester) == $sem)>Sem {{ $sem }}</option>
+            @endforeach
+        </select>
+        @error('semester')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
 </div>
 

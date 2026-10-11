@@ -6,21 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\Student;
 use App\Models\User;
+use App\Support\PasswordRules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
-    /** Show the login form. */
     public function showLogin()
     {
         return view('auth.login');
     }
 
-    /** Attempt to log the user in. */
     public function login(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
@@ -34,10 +32,8 @@ class AuthController extends Controller
                 ->onlyInput('email');
         }
 
-        // Only active accounts may sign in. Pending students wait for admin
-        // approval; blocked accounts are refused entirely.
         $user = Auth::user();
-        if ($user->isStudent() && ! $user->isActive()) {
+        if (! $user->isActive()) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -54,7 +50,6 @@ class AuthController extends Controller
         return redirect()->intended(route('dashboard'));
     }
 
-    /** Show the student registration form. */
     public function showRegister()
     {
         $departments = Department::orderBy('name')->get();
@@ -62,10 +57,6 @@ class AuthController extends Controller
         return view('auth.register', compact('departments'));
     }
 
-    /**
-     * Register a new student account.
-     * Faculty and admin accounts are created by the admin, not self-registered.
-     */
     public function register(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -75,7 +66,7 @@ class AuthController extends Controller
             'department_id' => ['required', 'exists:departments,id'],
             'semester' => ['required', 'string', 'max:20'],
             'phone' => ['nullable', 'string', 'max:20'],
-            'password' => ['required', 'confirmed', Password::min(6)],
+            'password' => PasswordRules::rules(),
         ]);
 
         DB::transaction(function () use ($data) {
@@ -96,13 +87,10 @@ class AuthController extends Controller
             ]);
         });
 
-        // Self-registered students stay pending until an admin approves them,
-        // so we do NOT log them in — send them to the login page with a notice.
         return redirect()->route('login')
             ->with('success', 'Registration received. Your account is waiting for admin approval.');
     }
 
-    /** Log the user out. */
     public function logout(Request $request): RedirectResponse
     {
         Auth::logout();

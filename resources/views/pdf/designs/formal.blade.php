@@ -55,17 +55,18 @@
         <tr><td class="k">Technologies Used</td><td>{{ $project->frontend_tech }} &amp; {{ $project->backend_tech }}</td></tr>
         <tr><td class="k">Guide / Faculty</td><td>{{ $project->assignment?->faculty?->user?->name ?? 'Not assigned' }}</td></tr>
         <tr><td class="k">Status</td><td>{{ $project->status }}</td></tr>
-        <tr><td class="k">Marks Awarded</td><td>{{ $project->marks !== null ? $project->marks . ' / 100' : '—' }}</td></tr>
+        @if($project->marksLabel())
+            <tr><td class="k">Marks Awarded</td><td>{{ $project->marksLabel() }}</td></tr>
+        @endif
     </table>
 
     <div class="h">Team Members</div>
     <table class="info">
-        <tr><th style="width:34%">Name</th><th style="width:33%">Roll No</th><th style="width:33%">Role</th></tr>
+        <tr><th style="width:50%">Name</th><th style="width:50%">Roll No</th></tr>
         @foreach($project->members as $m)
             <tr>
                 <td>{{ $m->student?->user?->name ?? '—' }}</td>
                 <td>{{ $m->student?->roll_no ?? '—' }}</td>
-                <td>{{ ucfirst($m->role_in_project) }}</td>
             </tr>
         @endforeach
     </table>

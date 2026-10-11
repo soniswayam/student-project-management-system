@@ -12,7 +12,7 @@ class DashboardController extends Controller
         $project = $student?->project();
 
         if ($project) {
-            $project->load('leader.user', 'members.student.user', 'assignment.faculty.user', 'submission', 'reviews.faculty.user');
+            $project->load('members.student.user', 'assignment.faculty.user', 'submission', 'reviews.faculty.user');
         }
 
         return view('student.dashboard', compact('student', 'project'));

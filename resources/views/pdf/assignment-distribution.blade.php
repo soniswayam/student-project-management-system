@@ -26,7 +26,7 @@
             </div>
 
             @foreach($subjectAssignments as $a)
-                @php $total = $studentCounts[$a->department_id] ?? 0; @endphp
+                @php $total = $studentCounts[$a->id] ?? 0; @endphp
                 <table class="kv" style="margin-top:6px;">
                     <tr>
                         <th style="width:14%">Assignment</th>

@@ -47,15 +47,15 @@
 
     <h2>Graded Projects (by marks)</h2>
     <table class="data">
-        <thead><tr><th class="c" style="width:6%">#</th><th>Project</th><th>Leader</th><th>Faculty</th><th class="c">Marks</th></tr></thead>
+        <thead><tr><th class="c" style="width:6%">#</th><th>Project</th><th>Group</th><th>Faculty</th><th class="c">Marks</th></tr></thead>
         <tbody>
             @forelse($completed as $project)
                 <tr>
                     <td class="c">{{ $loop->iteration }}</td>
                     <td>{{ $project->name }}</td>
-                    <td>{{ $project->leader?->user?->name ?? '—' }}</td>
+                    <td>{{ $project->memberNames() ?: '—' }}</td>
                     <td>{{ $project->assignment?->faculty?->user?->name ?? '—' }}</td>
-                    <td class="c">{{ $project->marks }}/100</td>
+                    <td class="c">{{ $project->marksLabel() ?? '—' }}</td>
                 </tr>
             @empty
                 <tr><td colspan="5" class="c muted">No graded projects yet.</td></tr>

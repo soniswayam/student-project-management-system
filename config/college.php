@@ -1,13 +1,5 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| College / Institute details
-|--------------------------------------------------------------------------
-| Shown in the header of every generated PDF (reports, project reports,
-| certificates). Change these values here or override them in your .env file.
-*/
-
 return [
     'name' => env('COLLEGE_NAME', 'Your College Name'),
     'tagline' => env('COLLEGE_TAGLINE', 'Department of Computer Applications'),

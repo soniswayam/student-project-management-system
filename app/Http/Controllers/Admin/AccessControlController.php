@@ -8,11 +8,6 @@ use App\Models\User;
 
 class AccessControlController extends Controller
 {
-    /**
-     * Combined "Access Control" page: Staff accounts and Roles as two tabs.
-     * Each tab's data (and the tab itself) is only loaded when the current
-     * user holds the matching permission.
-     */
     public function index()
     {
         $user = auth()->user();
@@ -41,7 +36,6 @@ class AccessControlController extends Controller
             $userCounts = User::selectRaw('role, COUNT(*) as total')->groupBy('role')->pluck('total', 'role');
         }
 
-        // Default to whichever tab the user is allowed to see.
         $activeTab = request('tab', $canStaff ? 'staff' : 'roles');
         if (($activeTab === 'staff' && ! $canStaff) || ($activeTab === 'roles' && ! $canRoles)) {
             $activeTab = $canStaff ? 'staff' : 'roles';

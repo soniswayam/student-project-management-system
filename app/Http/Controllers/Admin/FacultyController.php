@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\StoreFacultyRequest;
 use App\Http\Requests\Admin\UpdateFacultyRequest;
 use App\Models\Department;
 use App\Models\Faculty;
+use App\Models\ProjectReview;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,14 +19,12 @@ class FacultyController extends Controller
     {
         $query = Faculty::with('user', 'departments')->withCount('assignments');
 
-        // Search by name / email.
         if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%"));
         }
 
-        // Filter by any department the faculty teaches (not just the primary).
         if ($request->filled('department_id')) {
             $query->whereHas('departments', fn ($d) => $d->where('departments.id', $request->department_id));
         }
@@ -57,7 +56,6 @@ class FacultyController extends Controller
 
             $faculty = Faculty::create([
                 'user_id' => $user->id,
-                // First selected department is the primary/home department.
                 'department_id' => $data['department_ids'][0],
                 'designation' => $data['designation'] ?? null,
                 'phone' => $data['phone'] ?? null,
@@ -102,6 +100,12 @@ class FacultyController extends Controller
 
     public function destroy(Faculty $faculty): RedirectResponse
     {
+        if ($faculty->assignments()->exists()
+            || $faculty->givenAssignments()->exists()
+            || ProjectReview::where('faculty_id', $faculty->id)->exists()) {
+            return back()->with('error', 'This faculty has projects, assignments or reviews on record and cannot be deleted. Block their account instead.');
+        }
+
         $faculty->user->delete();
 
         return back()->with('success', 'Faculty deleted.');

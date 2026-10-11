@@ -3,28 +3,34 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AcademicYear;
 use App\Models\Assignment;
 use App\Models\Department;
 use App\Models\Faculty;
 use App\Models\Notification;
 use App\Support\SpreadsheetExporter;
+use App\Support\StoredFiles;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class AssignmentController extends Controller
 {
-    /** List every assignment across the college, with optional department filter. */
     public function index(Request $request)
     {
-        $assignments = $this->query($request)->paginate(15)->withQueryString();
+        $assignments = $this->query($request)
+            ->reorder()
+            ->orderByDepartmentAndSemester()
+            ->paginate(15)
+            ->withQueryString();
         $departments = Department::orderBy('name')->get();
+        $semesters = Department::semesterOptions();
 
-        return view('admin.assignments.index', compact('assignments', 'departments'));
+        return view('admin.assignments.index', compact('assignments', 'departments', 'semesters'));
     }
 
-    /** Read-only detail: one assignment and all its submissions. */
     public function show(Assignment $assignment)
     {
         $assignment->load([
@@ -33,24 +39,16 @@ class AssignmentController extends Controller
             'submissions.student.user',
         ]);
 
-        $totalStudents = $assignment->department->students()->count();
+        $totalStudents = $assignment->targetStudents()->count();
 
         return view('admin.assignments.show', compact('assignment', 'totalStudents'));
     }
 
-    /*
-    |------------------------------------------------------------------
-    | Create / edit / delete (assignments.manage)
-    |------------------------------------------------------------------
-    */
-
-    /** Show the "create assignment" form. */
     public function create()
     {
         return view('admin.assignments.create', $this->formData());
     }
 
-    /** Store a new assignment and notify the target department's students. */
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validateData($request);
@@ -60,19 +58,19 @@ class AssignmentController extends Controller
             $payload['attachment_path'] = $request->file('attachment')->store('assignments', 'public');
         }
 
+        $payload['academic_year_id'] = AcademicYear::currentId();
+
         $assignment = Assignment::create($payload);
         $this->notifyDepartmentStudents($assignment);
 
         return redirect()->route('admin.assignments.index')->with('success', 'Assignment created and students notified.');
     }
 
-    /** Show the edit form. */
     public function edit(Assignment $assignment)
     {
         return view('admin.assignments.edit', $this->formData() + ['assignment' => $assignment]);
     }
 
-    /** Update an existing assignment. */
     public function update(Request $request, Assignment $assignment): RedirectResponse
     {
         $data = $this->validateData($request);
@@ -90,19 +88,20 @@ class AssignmentController extends Controller
         return redirect()->route('admin.assignments.index')->with('success', 'Assignment updated.');
     }
 
-    /** Delete an assignment (submissions cascade). */
     public function destroy(Assignment $assignment): RedirectResponse
     {
         if ($assignment->attachment_path) {
             Storage::disk('public')->delete($assignment->attachment_path);
         }
 
+        $files = $assignment->submissions()->pluck('file_path');
+
         $assignment->delete();
+        StoredFiles::delete($files);
 
         return redirect()->route('admin.assignments.index')->with('success', 'Assignment deleted.');
     }
 
-    /** Dropdown / datalist data shared by the create & edit forms. */
     private function formData(): array
     {
         return [
@@ -110,18 +109,20 @@ class AssignmentController extends Controller
                 ->sortBy(fn (Faculty $f) => $f->user?->name)->values(),
             'departments' => Department::orderBy('name')->get(),
             'subjects' => Assignment::whereNotNull('subject')->distinct()->orderBy('subject')->pluck('subject'),
+            'semesters' => Department::semesterOptions(),
         ];
     }
 
-    /** Validation rules shared by store & update. */
     private function validateData(Request $request): array
     {
         return $request->validate([
             'faculty_id' => ['required', 'exists:faculties,id'],
             'department_id' => ['required', 'exists:departments,id'],
+            'semester' => ['nullable', 'integer', Rule::in(Department::semesterOptions())],
             'subject' => ['required', 'string', 'max:120'],
             'assignment_no' => ['nullable', 'integer', 'min:1', 'max:99'],
             'type' => ['required', 'in:'.implode(',', Assignment::TYPES)],
+            'max_marks' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'attachment' => ['nullable', 'file', 'mimes:pdf,doc,docx,zip', 'max:20480'],
@@ -129,25 +130,25 @@ class AssignmentController extends Controller
         ]);
     }
 
-    /** Build the persisted column payload from validated data. */
     private function payload(array $data): array
     {
         return [
             'faculty_id' => $data['faculty_id'],
             'department_id' => $data['department_id'],
+            'semester' => $data['semester'] ?? null,
             'subject' => $data['subject'],
             'assignment_no' => $data['assignment_no'] ?? null,
             'type' => $data['type'],
+            'max_marks' => $data['max_marks'] ?? null,
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
             'due_date' => $data['due_date'] ?? null,
         ];
     }
 
-    /** Notify every student in the assignment's target department. */
     private function notifyDepartmentStudents(Assignment $assignment): void
     {
-        $students = $assignment->department->students()->with('user')->get();
+        $students = $assignment->targetStudents()->with('user')->get();
 
         foreach ($students as $student) {
             if ($student->user) {
@@ -161,7 +162,6 @@ class AssignmentController extends Controller
         }
     }
 
-    /** Export a student-wise submission breakdown as an Excel (.xlsx) sheet. */
     public function export(Request $request)
     {
         $assignments = $this->query($request)
@@ -206,7 +206,6 @@ class AssignmentController extends Controller
         );
     }
 
-    /** Download a student-wise submission report as a PDF. */
     public function exportPdf(Request $request)
     {
         $assignments = $this->query($request)
@@ -215,19 +214,13 @@ class AssignmentController extends Controller
 
         return Pdf::loadView('pdf.assignments', [
             'assignments' => $assignments,
+            'studentCounts' => Assignment::targetCounts($assignments),
             'college' => config('college'),
             'generatedAt' => now()->format('d M Y, H:i'),
         ])->setPaper('a4')
             ->download('assignment-submissions-'.now()->format('Y-m-d').'.pdf');
     }
 
-    /*
-    |------------------------------------------------------------------
-    | Assignment Distribution report (Faculty › Subject › Assignment)
-    |------------------------------------------------------------------
-    */
-
-    /** On-screen distribution report with Excel / PDF / Print buttons. */
     public function distribution(Request $request)
     {
         [$byFaculty, $studentCounts, $totals] = $this->distributionData($request);
@@ -236,7 +229,6 @@ class AssignmentController extends Controller
         return view('admin.assignments.distribution', compact('byFaculty', 'studentCounts', 'totals', 'departments'));
     }
 
-    /** Distribution as a flat, detailed Excel sheet (one row per assignment). */
     public function distributionExcel(Request $request)
     {
         [$byFaculty, $studentCounts] = $this->distributionData($request);
@@ -280,7 +272,6 @@ class AssignmentController extends Controller
         );
     }
 
-    /** Distribution as a grouped PDF (Faculty › Subject). */
     public function distributionPdf(Request $request)
     {
         [$byFaculty, $studentCounts, $totals] = $this->distributionData($request);
@@ -295,10 +286,6 @@ class AssignmentController extends Controller
             ->download('assignment-distribution-'.now()->format('Y-m-d').'.pdf');
     }
 
-    /**
-     * Build the distribution dataset: assignments grouped by faculty name,
-     * a department => student-count map, and headline totals.
-     */
     private function distributionData(Request $request): array
     {
         $assignments = $this->query($request)
@@ -312,7 +299,7 @@ class AssignmentController extends Controller
             ->groupBy(fn (Assignment $a) => $a->faculty?->user?->name ?? 'Unassigned')
             ->sortKeys();
 
-        $studentCounts = Department::withCount('students')->pluck('students_count', 'id');
+        $studentCounts = Assignment::targetCounts($assignments);
 
         $totals = [
             'faculty' => $byFaculty->count(),
@@ -325,10 +312,11 @@ class AssignmentController extends Controller
         return [$byFaculty, $studentCounts, $totals];
     }
 
-    /** Shared, filterable base query with submission counts. */
     private function query(Request $request)
     {
-        $query = Assignment::with(['faculty.user', 'department'])
+        $query = Assignment::query()
+            ->inActiveYear()
+            ->with(['faculty.user', 'department'])
             ->withCount([
                 'submissions',
                 'submissions as checked_count' => fn ($q) => $q->where('status', 'checked'),
@@ -337,6 +325,10 @@ class AssignmentController extends Controller
 
         if ($request->filled('department_id')) {
             $query->where('department_id', $request->department_id);
+        }
+
+        if ($request->filled('semester')) {
+            $query->where('semester', $request->query('semester'));
         }
 
         return $query;

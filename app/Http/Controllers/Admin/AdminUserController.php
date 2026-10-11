@@ -11,13 +11,11 @@ use Illuminate\Http\RedirectResponse;
 
 class AdminUserController extends Controller
 {
-    /** Slugs of every staff role (super_admin, admin, and custom roles). */
     private function staffRoleNames(): array
     {
         return Role::where('is_staff', true)->pluck('name')->all();
     }
 
-    /** List all staff accounts. */
     public function index()
     {
         $admins = User::whereIn('role', $this->staffRoleNames())
@@ -45,6 +43,7 @@ class AdminUserController extends Controller
     public function edit(User $admin)
     {
         abort_unless(in_array($admin->role, $this->staffRoleNames(), true), 404);
+        $this->guardSuperAdmin($admin);
 
         return view('admin.admins.edit', ['admin' => $admin, 'roles' => $this->staffRoles()]);
     }
@@ -52,10 +51,10 @@ class AdminUserController extends Controller
     public function update(UpdateAdminRequest $request, User $admin): RedirectResponse
     {
         abort_unless(in_array($admin->role, $this->staffRoleNames(), true), 404);
+        $this->guardSuperAdmin($admin);
 
         $data = $request->validated();
 
-        // Only overwrite the password when a new one is supplied.
         if (empty($data['password'])) {
             unset($data['password']);
         }
@@ -68,13 +67,12 @@ class AdminUserController extends Controller
     public function destroy(User $admin): RedirectResponse
     {
         abort_unless(in_array($admin->role, $this->staffRoleNames(), true), 404);
+        $this->guardSuperAdmin($admin);
 
-        // Guard: never delete yourself.
         if ($admin->id === auth()->id()) {
             return back()->with('error', 'You cannot delete your own account.');
         }
 
-        // Guard: keep at least one super admin in the system.
         if ($admin->role === 'super_admin' && User::where('role', 'super_admin')->count() <= 1) {
             return back()->with('error', 'At least one Super Admin must remain.');
         }
@@ -84,7 +82,11 @@ class AdminUserController extends Controller
         return back()->with('success', 'Staff account deleted.');
     }
 
-    /** Staff roles for the role <select> dropdown. */
+    private function guardSuperAdmin(User $admin): void
+    {
+        abort_if($admin->isSuperAdmin() && ! auth()->user()->isSuperAdmin(), 403, 'Only a Super Admin can change a Super Admin account.');
+    }
+
     private function staffRoles()
     {
         return Role::where('is_staff', true)->orderBy('label')->get();

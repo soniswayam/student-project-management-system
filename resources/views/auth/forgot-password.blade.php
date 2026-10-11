@@ -9,12 +9,25 @@
                 <span class="app-avatar mx-auto mb-2" style="width:52px;height:52px;font-size:1.4rem"><i class="bi bi-shield-lock-fill"></i></span>
             </a>
             <h4 class="mb-1">Forgot your password?</h4>
-            <p class="text-muted small mb-0">Enter your account email to reset it</p>
+            <p class="text-muted small mb-0">We'll email you a link to set a new one</p>
         </div>
 
         <div class="card shadow-sm">
             <div class="card-body p-4">
                 @include('partials.alerts')
+
+                @if(session('reset_url_preview'))
+
+                    <div class="alert alert-warning small">
+                        <div class="fw-semibold mb-1">
+                            <i class="bi bi-tools me-1"></i>Local mode — no mail server configured
+                        </div>
+                        <p class="mb-2">Email delivery is set to <code>log</code>, so use this link directly:</p>
+                        <a href="{{ session('reset_url_preview') }}" class="btn btn-sm btn-warning w-100">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Open reset link
+                        </a>
+                    </div>
+                @endif
 
                 <form method="POST" action="{{ route('password.email') }}">
                     @csrf
